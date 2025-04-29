@@ -97,3 +97,7 @@ runuser -l $NONROOT_USER -c "cilium install"
 runuser -l $NONROOT_USER -c "cilium status --wait"
 
 echo "✅ Kubernetes setup with Cilium and kubectl access is complete!"
+
+##### If Cluster Do Not Start ########################
+
+#sudo kubeadm init --kubernetes-version=1.31.1   --pod-network-cidr=192.168.0.0/16#
