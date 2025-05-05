@@ -8,7 +8,7 @@ WORKERS=("csdis-cluster-node-001@10.0.0.17" "csdis-cluster-node-002@10.0.0.127")
 setup_node() {
   ssh "$1" "sudo swapoff -a && sudo sed -i '/ swap / s/^/#/' /etc/fstab"
   ssh "$1" <<EOF
-sudo apt-get update
+sudo apt-get update && sudo apt upgrade -y
 sudo apt-get install -y apt-transport-https curl containerd
 sudo mkdir -p /etc/containerd
 containerd config default | sudo tee /etc/containerd/config.toml
