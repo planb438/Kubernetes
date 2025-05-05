@@ -1,103 +1,57 @@
 #!/bin/bash
-set -e
 
-# Constants
-K8S_VERSION="1.31.1-1.1"
-TARBALL_URL="https://cm.lf.training/LFS258/LFS258_V2025-03-06_SOLUTIONS.tar.xz"
-TARBALL_NAME="LFS258_V2025-03-06_SOLUTIONS.tar.xz"
-K8S_HOSTNAME_ALIAS="k8scp"
-DOWNLOAD_USER="LFtraining"
-DOWNLOAD_PASS="Penguin2014"
-K8S_POD_SUBNET="192.168.0.0/16"
-NONROOT_USER="master-node-001"
+# Define your node IPs and hostnames
+MASTER_IP="10.0.0.191"
+WORKER_IPS=("10.0.0.17" "10.0.0.127")
+USERNAME="ubuntu"  # change if different
 
-echo "🔧 Updating system..."
-apt-get update && apt-get upgrade -y
+# Common setup on all nodes
+setup_node() {
+  ssh "$USERNAME@$1" "sudo swapoff -a && sudo sed -i '/ swap / s/^/#/' /etc/fstab"
+  ssh "$USERNAME@$1" <<EOF
+sudo apt-get update
+sudo apt-get install -y apt-transport-https curl containerd
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml
+sudo systemctl restart containerd
+sudo systemctl enable containerd
 
-echo "📦 Installing required packages..."
-apt install -y apt-transport-https software-properties-common ca-certificates socat curl gnupg lsb-release vim
-
-echo "🧹 Disabling swap..."
-swapoff -a
-
-echo "📦 Loading kernel modules..."
-modprobe overlay
-modprobe br_netfilter
-
-echo "📶 Configuring sysctl for Kubernetes..."
-cat <<EOF | tee /etc/sysctl.d/kubernetes.conf
-net.bridge.bridge-nf-call-ip6tables = 1
-net.bridge.bridge-nf-call-iptables = 1
-net.ipv4.ip_forward = 1
+sudo curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+sudo apt-get update
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
 EOF
-sysctl --system
+}
 
-echo "🐳 Installing containerd..."
-mkdir -p /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
-    | tee /etc/apt/sources.list.d/docker.list > /dev/null
-apt-get update && apt-get install -y containerd.io
+echo "[*] Setting up master node ($MASTER_IP)"
+setup_node "$MASTER_IP"
 
-containerd config default | tee /etc/containerd/config.toml
-sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
-systemctl restart containerd
+for ip in "${WORKER_IPS[@]}"; do
+  echo "[*] Setting up worker node ($ip)"
+  setup_node "$ip"
+done
 
-echo "🔑 Adding Kubernetes GPG key..."
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+# Initialize Kubernetes on master
+echo "[*] Initializing master"
+ssh "$USERNAME@$MASTER_IP" <<EOF
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16
 
-echo "📦 Adding Kubernetes APT repo..."
-echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /" \
-    | tee /etc/apt/sources.list.d/kubernetes.list
+mkdir -p \$HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf \$HOME/.kube/config
+sudo chown \$(id -u):\$(id -g) \$HOME/.kube/config
 
-apt-get update
+# Install Cilium CNI
+kubectl create -f https://raw.githubusercontent.com/cilium/cilium/v1.15.4/install/kubernetes/quick-install.yaml
+EOF
 
-echo "☸️ Installing Kubernetes components version $K8S_VERSION..."
-apt-get install -y kubeadm=${K8S_VERSION} kubelet=${K8S_VERSION} kubectl=${K8S_VERSION}
-apt-mark hold kubelet kubeadm kubectl
+# Fetch join command
+JOIN_CMD=$(ssh "$USERNAME@$MASTER_IP" "kubeadm token create --print-join-command")
 
-echo "🌐 Detecting IP address..."
-NODE_IP=$(hostname -i | awk '{print $1}')
-echo "Node IP detected: $NODE_IP"
+# Join workers
+for ip in "${WORKER_IPS[@]}"; do
+  echo "[*] Joining worker node ($ip)"
+  ssh "$USERNAME@$ip" "sudo $JOIN_CMD"
+done
 
-echo "🔗 Adding /etc/hosts entry for k8scp..."
-if ! grep -q "$K8S_HOSTNAME_ALIAS" /etc/hosts; then
-    echo "$NODE_IP $K8S_HOSTNAME_ALIAS" >> /etc/hosts
-fi
-
-echo "📁 Downloading and extracting course files..."
-wget --user="$DOWNLOAD_USER" --password="$DOWNLOAD_PASS" "$TARBALL_URL"
-tar -xvf "$TARBALL_NAME"
-
-echo "📋 Copying kubeadm config..."
-cp ./LFS258/SOLUTIONS/s_03/kubeadm-config.yaml /root/
-
-echo "📝 Modifying kubeadm config..."
-sed -i "s|controlPlaneEndpoint:.*|controlPlaneEndpoint: \"$K8S_HOSTNAME_ALIAS:6443\"|" /root/kubeadm-config.yaml
-sed -i "s|podSubnet:.*|  podSubnet: $K8S_POD_SUBNET|" /root/kubeadm-config.yaml
-sed -i "s|kubernetesVersion:.*|kubernetesVersion: $K8S_VERSION|" /root/kubeadm-config.yaml
-echo "🚀 Initializing Kubernetes control plane..."
-kubeadm init --config=/root/kubeadm-config.yaml --upload-certs --node-name=cp | tee kubeadm-init.out
-
-echo "👤 Configuring kubectl for root user..."
-mkdir -p $HOME/.kube
-cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-chown $(id -u):$(id -g) $HOME/.kube/config
-
-echo "👤 Configuring kubectl for user: $NONROOT_USER"
-runuser -l $NONROOT_USER -c "mkdir -p /home/$NONROOT_USER/.kube"
-cp -i /etc/kubernetes/admin.conf /home/$NONROOT_USER/.kube/config
-chown $NONROOT_USER:$NONROOT_USER /home/$NONROOT_USER/.kube/config
-
-echo "🌐 Installing Cilium CNI plugin..."
-runuser -l $NONROOT_USER -c "curl -LO https://github.com/cilium/cilium-cli/releases/latest/download/cilium-linux-amd64"
-runuser -l $NONROOT_USER -c "chmod +x cilium-linux-amd64 && sudo mv cilium-linux-amd64 /usr/local/bin/cilium"
-
-runuser -l $NONROOT_USER -c "cilium install"
-runuser -l $NONROOT_USER -c "cilium status --wait"
-
-echo "✅ Kubernetes setup with Cilium and kubectl access is complete!"
-
-##### If Cluster Do Not Start ########################
-
-#sudo kubeadm init --kubernetes-version=1.31.1   --pod-network-cidr=192.168.0.0/16#
+echo "[✔] Kubernetes cluster setup complete!"
