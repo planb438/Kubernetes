@@ -35,7 +35,7 @@ done
 # Initialize Kubernetes on master
 echo "[*] Initializing master"
 ssh "$USERNAME@$MASTER_IP" <<EOF
-sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+sudo kubeadm init 
 
 mkdir -p \$HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf \$HOME/.kube/config
