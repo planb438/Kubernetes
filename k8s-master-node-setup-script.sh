@@ -5,6 +5,7 @@ sudo hostnamectl set-hostname csdis-master-node-001
 
 # ──[ OPTIONAL: Add worker hostnames to /etc/hosts ]──────────────────
 echo "
+10.0.0.191 csdis-master-node-001
 10.0.0.17 csdis-cluster-node-001
 10.0.0.127 csdis-cluster-node-002
 " | sudo tee -a /etc/hosts
@@ -31,7 +32,7 @@ sudo apt-get install -y kubelet kubeadm kubectl
 sudo apt-mark hold kubelet kubeadm kubectl
 
 # ──[ Initialize cluster ]────────────────────────────────────────────
-sudo kubeadm init --pod-network-cidr=10.0.0.0/16
+sudo kubeadm init --node-name=csdis-master-node-001 --pod-network-cidr=192.168.0.0/16
 
 # ──[ Configure kubeconfig ]──────────────────────────────────────────
 mkdir -p $HOME/.kube
