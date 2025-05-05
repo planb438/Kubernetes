@@ -5,7 +5,7 @@ tar -xvf LFS258V2025-03-06SOLUTIONS.tar.xz
 
 apt-get update && apt-get upgrade -y
 
-apt install apt-transport-https   \
+apt install apt-transport-https \
 software-properties-common ca-certificates socat -y
 
 swapoff -a
