@@ -43,6 +43,7 @@ sudo chown \$(id -u):\$(id -g) \$HOME/.kube/config
 
 # Install Cilium CNI
 kubectl create -f https://raw.githubusercontent.com/cilium/cilium/v1.15.4/install/kubernetes/quick-install.yaml
+kubectl -n kube-system wait --for=condition=Ready pod -l k8s-app=cilium --timeout=180s
 EOF
 
 # Fetch join command
