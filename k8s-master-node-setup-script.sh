@@ -1,14 +1,13 @@
 #!/bin/bash
 
 # Define your node IPs and hostnames
-MASTER_IP="10.0.0.191"
-WORKER_IPS=("10.0.0.17" "10.0.0.127")
-USERNAME="ubuntu"  # change if different
+MASTER="csdis-master-node-001@10.0.0.191"
+WORKERS=("csdis-cluster-node-001@10.0.0.17" "csdis-cluster-node-002@10.0.0.127")
 
 # Common setup on all nodes
 setup_node() {
-  ssh "$USERNAME@$1" "sudo swapoff -a && sudo sed -i '/ swap / s/^/#/' /etc/fstab"
-  ssh "$USERNAME@$1" <<EOF
+  ssh "$1" "sudo swapoff -a && sudo sed -i '/ swap / s/^/#/' /etc/fstab"
+  ssh "$1" <<EOF
 sudo apt-get update
 sudo apt-get install -y apt-transport-https curl containerd
 sudo mkdir -p /etc/containerd
@@ -24,17 +23,17 @@ sudo apt-mark hold kubelet kubeadm kubectl
 EOF
 }
 
-echo "[*] Setting up master node ($MASTER_IP)"
-setup_node "$MASTER_IP"
+echo "[*] Setting up master node ($MASTER)"
+setup_node "$MASTER"
 
-for ip in "${WORKER_IPS[@]}"; do
-  echo "[*] Setting up worker node ($ip)"
-  setup_node "$ip"
+for node in "${WORKERS[@]}"; do
+  echo "[*] Setting up worker node ($node)"
+  setup_node "$node"
 done
 
 # Initialize Kubernetes on master
 echo "[*] Initializing master"
-ssh "$USERNAME@$MASTER_IP" <<EOF
+ssh "$MASTER" <<EOF
 sudo kubeadm init 
 
 mkdir -p \$HOME/.kube
@@ -47,12 +46,12 @@ kubectl -n kube-system wait --for=condition=Ready pod -l k8s-app=cilium --timeou
 EOF
 
 # Fetch join command
-JOIN_CMD=$(ssh "$USERNAME@$MASTER_IP" "kubeadm token create --print-join-command")
+JOIN_CMD=$(ssh "$MASTER" "kubeadm token create --print-join-command")
 
 # Join workers
-for ip in "${WORKER_IPS[@]}"; do
-  echo "[*] Joining worker node ($ip)"
-  ssh "$USERNAME@$ip" "sudo $JOIN_CMD"
+for node in "${WORKERS[@]}"; do
+  echo "[*] Joining worker node ($node)"
+  ssh "$node" "sudo $JOIN_CMD"
 done
 
 echo "[✔] Kubernetes cluster setup complete!"
