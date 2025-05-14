@@ -16,15 +16,23 @@ You've added your public SSH key to the ~/.ssh/authorized_keys on each node.
 ---
 
 On your control machine:
--
+
+---
 
 ssh-keygen  # Press Enter through the prompts to generate ~/.ssh/id_rsa
+
   --
+  
 ssh-copy-id ubuntu@10.0.0.191   # master
+
 -
+
 ssh-copy-id ubuntu@10.0.0.17    # worker 1
+
 -
+
 ssh-copy-id ubuntu@10.0.0.127   # worker 2
+
 --
 ---
 After this, test:
