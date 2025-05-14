@@ -39,5 +39,5 @@ Welcome to my personal lab environment for preparing for the **Certified Kuberne
 1. Set up a Kubernetes cluster (KIND, Minikube, or cloud-based).
 2. Clone this repo:
    ```bash
-   git clone https://github.com/<your-username>/cks-labs.git
+   git clone https://github.com/username>/cks-labs.git
    cd cks-labs
