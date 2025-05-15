@@ -1,3 +1,4 @@
+    
 #!/bin/bash
 
 echo "[+] Cleaning up NetworkPolicy lab..."
