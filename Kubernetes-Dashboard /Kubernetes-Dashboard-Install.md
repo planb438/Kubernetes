@@ -136,3 +136,18 @@ spec:
             name: kubernetes-dashboard
             port:
               number: 443
+
+
+---
+
+It looks like your Kubernetes Dashboard services are all set to ClusterIP, which means they're not directly accessible from outside the cluster. Let's patch the kubernetes-dashboard-kong-proxy service to use NodePort so you can access it easily in your home lab.
+
+Step 1: Patch the Kong Proxy Service to Use NodePort
+bash
+kubectl patch svc kubernetes-dashboard-kong-proxy -n kubernetes-dashboard -p '{"spec": {"type": "NodePort"}}'
+Step 2: Verify the Change
+bash
+kubectl get svc -n kubernetes-dashboard
+Now, you should see kubernetes-dashboard-kong-proxy listed as NodePort with a high port number (e.g., 3xxxx).
+
+
