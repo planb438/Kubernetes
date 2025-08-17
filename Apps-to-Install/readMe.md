@@ -1,40 +1,79 @@
 Here’s a curated list of real-world applications you can deploy in your home lab Kubernetes cluster, ranging from developer tools to self-hosted services and monitoring systems. All can be installed via Helm or kubectl:
 
+---
+
 🛠️ Developer & DevOps Tools
 Application	Use Case	Install Method
-Argo CD	GitOps Continuous Deployment	helm install argocd argo/argo-cd
-Jenkins	CI/CD Pipelines	helm install jenkins jenkins/jenkins
-Gitea	Self-hosted GitHub alternative	helm install gitea gitea-charts/gitea
-Harbor	Private Docker Registry	helm install harbor harbor/harbor
-Tekton	Cloud-Native CI/CD	kubectl apply -f https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
+
+-Argo CD	GitOps Continuous Deployment	helm install argocd argo/argo-cd
+
+-Jenkins	CI/CD Pipelines	helm install jenkins jenkins/jenkins
+
+-Gitea	Self-hosted GitHub alternative	helm install gitea gitea-charts/gitea
+
+-Harbor	Private Docker Registry	helm install harbor harbor/harbor
+
+-Tekton	Cloud-Native CI/CD	kubectl apply -f https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
+
+---
+
 📊 Monitoring & Logging
 Application	Use Case	Install Method
-Prometheus + Grafana	Monitoring & Alerts	helm install prometheus prometheus-community/kube-prometheus-stack
-Loki	Log Aggregation (like ELK)	helm install loki grafana/loki-stack
-Elasticsearch + Kibana	Search & Analytics	helm install elasticsearch elastic/elasticsearch
-OpenTelemetry	Distributed Tracing	helm install opentelemetry open-telemetry/opentelemetry-collector
+
+-Prometheus + Grafana	Monitoring & Alerts	helm install prometheus prometheus-community/kube-prometheus-stack
+
+-Loki	Log Aggregation (like ELK)	helm install loki grafana/loki-stack
+
+-Elasticsearch + Kibana	Search & Analytics	helm install elasticsearch elastic/elasticsearch
+
+-OpenTelemetry	Distributed Tracing	helm install opentelemetry open-telemetry/opentelemetry-collector
+
+---
 🏠 Self-Hosted Services
 Application	Use Case	Install Method
-Nextcloud	Google Drive Alternative	helm install nextcloud nextcloud/nextcloud
-Jellyfin	Self-hosted Netflix (Media Server)	helm install jellyfin jellyfin/jellyfin
-Home Assistant	IoT Automation	helm install home-assistant home-assistant/home-assistant
-Bitwarden	Self-hosted Password Manager	helm install bitwarden bitwarden/bitwarden
+
+-Nextcloud	Google Drive Alternative	helm install nextcloud nextcloud/nextcloud
+
+-Jellyfin	Self-hosted Netflix (Media Server)	helm install jellyfin jellyfin/jellyfin
+
+-Home Assistant	IoT Automation	helm install home-assistant home-assistant/home-assistant
+
+-Bitwarden	Self-hosted Password Manager	helm install bitwarden bitwarden/bitwarden
+
+
+---
 📡 Networking & Security
 Application	Use Case	Install Method
-Traefik	Ingress Controller (Reverse Proxy)	helm install traefik traefik/traefik
-Cert-Manager	Automated SSL Certificates (Let’s Encrypt)	helm install cert-manager jetstack/cert-manager
-Keycloak	Identity & Access Management (IAM)	helm install keycloak bitnami/keycloak
-Pi-hole	Network-wide Ad Blocker	helm install pihole mojo2600/pihole-kubernetes
+
+-Traefik	Ingress Controller (Reverse Proxy)	helm install traefik traefik/traefik
+
+-Cert-Manager	Automated SSL Certificates (Let’s Encrypt)	helm install cert-manager jetstack/cert-manager
+
+-Keycloak	Identity & Access Management (IAM)	helm install keycloak bitnami/keycloak
+
+-Pi-hole	Network-wide Ad Blocker	helm install pihole mojo2600/pihole-kubernetes
+
+---
 🤖 AI/ML & Data Processing
 Application	Use Case	Install Method
-JupyterHub	Cloud Notebooks for Data Science	helm install jupyterhub jupyterhub/jupyterhub
-MLflow	Machine Learning Experiment Tracking	helm install mlflow community-charts/mlflow
-Kubeflow	End-to-End ML Pipelines	Follow Kubeflow Docs
+
+-JupyterHub	Cloud Notebooks for Data Science	helm install jupyterhub jupyterhub/jupyterhub
+
+-MLflow	Machine Learning Experiment Tracking	helm install mlflow community-charts/mlflow
+
+-Kubeflow	End-to-End ML Pipelines	Follow Kubeflow Docs
+
+---
 🎮 Fun & Experimental
 Application	Use Case	Install Method
-Minecraft Server	Self-hosted Game Server	helm install mc itzg/minecraft
-WordPress	Self-hosted Blog/CMS	helm install wordpress bitnami/wordpress
-Ghost	Modern Blogging Platform	helm install ghost ghost/ghost
+
+-Minecraft Server	Self-hosted Game Server	helm install mc itzg/minecraft
+
+-WordPress	Self-hosted Blog/CMS	helm install wordpress bitnami/wordpress
+
+-Ghost	Modern Blogging Platform	helm install ghost ghost/ghost
+
+---
 🚀 How to Choose?
 For Learning DevOps:
 
