@@ -75,3 +75,6 @@ Cluster Downtime: This process requires temporary downtime of the control plane.
 Backup First: Always backup current etcd data before restoring.
 
 Consistency: Ensure all control plane nodes are restored to the same snapshot if you have a multi-master setup.
+
+sudo reboot
+
