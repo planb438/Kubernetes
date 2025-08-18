@@ -81,6 +81,7 @@ sudo reboot
 ---
 
 If you run sudo kubeadm reset --force followed by a restore from an etcd snapshot backup, here's exactly what will be included (and excluded) from your restored cluster state:
+--
 
 What's Included in the Restore ✅
 All Kubernetes Objects:
