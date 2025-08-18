@@ -24,7 +24,7 @@ etcdctl --data-dir <data-dir-location> snapshot restore snapshot.db
 ---
 
 Here's how to properly restore your etcd snapshot:
-
+--
 Solution: Force Restore Etcd Snapshot
 First, stop kube-apiserver (to prevent conflicts):
 
