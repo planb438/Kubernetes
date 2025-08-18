@@ -68,6 +68,9 @@ subjects:
   namespace: kubernetes-dashboard
 EOF
 3. Get the Login Token
+  
+---
+
 bash
 kubectl -n kubernetes-dashboard create token admin-user
 📌 Copy the token and paste it into the Dashboard login page.
