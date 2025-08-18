@@ -136,3 +136,33 @@ Set up Nextcloud Talk for video calls.
 
 Let me know if you need adjustments! 🚀
 
+---
+
+Since sudo isn't available in the Nextcloud container, we'll use a direct approach to reset the admin password. Here's how to do it properly:
+
+Password Reset Without Sudo
+Access the Nextcloud pod:
+
+bash
+kubectl exec -n nextcloud -it deploy/nextcloud -- bash
+Navigate to the Nextcloud root directory:
+
+bash
+cd /var/www/html
+Reset the password using the correct syntax:
+
+bash
+php occ user:resetpassword admin
+You'll be prompted to enter and confirm a new password.
+
+Example output:
+
+text
+Enter a new password: 
+Confirm the new password: 
+Successfully reset password for admin
+Exit the pod:
+
+bash
+exit
+
