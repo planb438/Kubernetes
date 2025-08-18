@@ -11,3 +11,8 @@ sudo etcdctl --endpoints=https://127.0.0.1:2379 \
   sudo etcdctl --write-out=table snapshot status backUp-Cluster-kubernetes.db
 
   ---
+  
+export ETCDCTL_API=3
+
+---
+etcdctl --data-dir <data-dir-location> snapshot restore snapshot.db
