@@ -85,6 +85,7 @@ If you run sudo kubeadm reset --force followed by a restore from an etcd snapsho
 
 What's Included in the Restore ✅
 --
+
 All Kubernetes Objects:
 
 Pods, Deployments, Services, ConfigMaps, Secrets, etc.
@@ -109,6 +110,7 @@ Scheduler/controller-manager states
 
 What's NOT Included ❌
 --
+
 Node Components:
 
 Kubelet configurations on worker nodes
