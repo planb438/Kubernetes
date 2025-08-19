@@ -17,7 +17,7 @@ service:
   type: NodePort             # For easy access (or use LoadBalancer/Ingress)
 
 nextcloud:
-  host: 192.168.x.x          # Replace with your worker node IP or domain - # Internal IP of any worker node
+  host: 10.0.0.101          # Replace with your worker node IP or domain - # Internal IP of any worker node
   username: admin            # Default admin user
   password: "Adm!nP@ss123"   # Change this to a strong password!
 
