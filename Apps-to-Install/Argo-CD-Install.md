@@ -1,5 +1,5 @@
 Here's a step-by-step guide to install Argo CD in your cluster, with Git documentation best practices. I'll include commands, verification steps, and how to structure your Git repo.
-
+-
 Step 1: Prerequisites
 Working Kubernetes Cluster (You already have this)
 
