@@ -15,6 +15,13 @@ bash
 # Create namespace for MinIO
 microk8s kubectl create namespace velero
 
+ Enable MicroK8s Storage Addon
+If no StorageClasses exist, enable the MicroK8s storage addon:
+
+bash
+microk8s enable hostpath-storage
+This will create a default StorageClass using hostPath volumes.
+
 # Install MinIO (S3-compatible storage)
 cat <<EOF | microk8s kubectl apply -f -
 apiVersion: v1
