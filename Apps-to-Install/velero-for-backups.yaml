@@ -100,6 +100,11 @@ cat > minio-credentials <<EOF
 aws_access_key_id=minioadmin
 aws_secret_access_key=minioadmin123
 EOF
+
+# Export MicroK8s kubeconfig to a file
+microk8s config > ~/.kube/config
+
+
 Step 4: Install Velero in Cluster
 bash
 # Install Velero with MinIO backend
