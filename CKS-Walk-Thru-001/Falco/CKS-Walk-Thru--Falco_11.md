@@ -8,6 +8,8 @@
 
 Falco: Runtime Threat Detection
 
+---
+
  What it does
 Falco watches syscalls from the Linux kernel (via eBPF or a kernel module) and alerts when suspicious behavior happens in your containers or host.
 Examples:
@@ -21,6 +23,8 @@ Examples:
 
 Step-by-Step: Install Falco (Helm-based)
 
+---
+
 1. Add the Falco Helm repo
 bash
 CopyEdit
@@ -29,14 +33,14 @@ CopyEdit
 helm repo add falcosecurity https://falcosecurity.github.io/charts
 helm repo update
 
-
+--
 
  2. Create a dedicated namespace
 
 
 kubectl create namespace falco
 
-
+--
 
  3. Install Falco with Helm
 
@@ -46,6 +50,8 @@ helm install falco falcosecurity/falco -n falco
 
 
 Want to avoid eBPF errors? Make sure your kernel supports it. If unsure, Falco will fall back to the kernel module.
+
+--
 
  4. Verify it's running
 
@@ -86,12 +92,7 @@ You can check logs:
 
 kubectl logs -l app.kubernetes.io/name=falco -n falco -c falco 
 
-
-
-
-
-
-
+---
 
  What Falco Catches
 
@@ -105,7 +106,7 @@ kubectl logs -l app.kubernetes.io/name=falco -n falco -c falco
 
 
 
-
+--
 
   CKS Tip
 ◇ Falco is detection, not prevention (like IDS)
@@ -119,6 +120,8 @@ Let verify it's working and test an alert. Do you want to walk through a custom 
 
 
 Great  lets verify Falco is working and then trigger a known alert. Heres a clean walkthrough 
+
+--
 
 Step 1: Confirm Falco is Running
 
@@ -138,6 +141,8 @@ falco-xxxxx            1/1     Running   0          1m
 
 If not running, run kubectl describe pod <name> -n falco to troubleshoot.
 
+--
+
 Step 2: View Falco Logs (Live)
 Let watch the logs to catch alerts in real time:
 
@@ -147,6 +152,8 @@ kubectl logs -n falco -l app=falco -f
 
 
 Leave that running in one terminal/tab.
+
+--
 
 Step 3: Trigger a Falco Rule (Shell Spawned in Container)
 In a second terminal/tab, run this to simulate an intrusion:
@@ -158,6 +165,8 @@ kubectl run test-shell --rm -it --image=alpine -- sh
 
 Once inside the shell, press enter a few times, then exit (Ctrl+D).
 
+--
+
 Step 4: Look for This Alert in the Logs
 In your first terminal (where Falco logs are streaming), you should see something like:
 css
@@ -168,6 +177,8 @@ Notice A shell was spawned in a container with an attached terminal
 
 
 This confirms Falco intercepted and flagged the syscall.
+
+--
 
 Cleanup
 No cleanup needed  --rm deleted the pod automatically.
