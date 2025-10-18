@@ -1,3 +1,9 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Ubuntu%2022.04%2B-lightgrey)](#)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-MicroK8s%20%7C%20kubeadm-blue)](#)
+[![YouTube](https://img.shields.io/badge/YouTube-TechShorts-red)](https://www.youtube.com/@adaribain)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Adari%20Bain-blue)](https://www.linkedin.com/in/adari-bain-298924152/)
+
 ✅ Revised Scenario 9: Cosign Verification (without Signing Your Own)
 Instead of signing your own image (which requires Docker Hub auth + push), we’ll use a public image that’s already signed by its publisher. That way, you can focus on Kyverno + verifyImages, without fighting Podman + registry permissions.
 
