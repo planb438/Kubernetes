@@ -1,4 +1,13 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Ubuntu%2022.04%2B-lightgrey)](#)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-MicroK8s%20%7C%20kubeadm-blue)](#)
+[![YouTube](https://img.shields.io/badge/YouTube-TechShorts-red)](https://www.youtube.com/@adaribain)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Adari%20Bain-blue)](https://www.linkedin.com/in/adari-bain-298924152/)
+
+--
+
 Backing up an etcd cluster 
+
 --
 
 export ETCDCTL_API=3
@@ -18,14 +27,19 @@ sudo etcdctl --endpoints=https://127.0.0.1:2379 \
 export ETCDCTL_API=3
 
 ---
+
 etcdctl --data-dir <data-dir-location> snapshot restore snapshot.db
 
 ---
 
 Here's how to properly restore your etcd snapshot:
+
 --
+
 Solution: Force Restore Etcd Snapshot
 First, stop kube-apiserver (to prevent conflicts):
+
+--
 
 bash
 sudo systemctl stop kube-apiserver
@@ -81,9 +95,11 @@ sudo reboot
 ---
 
 If you run sudo kubeadm reset --force followed by a restore from an etcd snapshot backup, here's exactly what will be included (and excluded) from your restored cluster state:
+
 --
 
 What's Included in the Restore ✅
+
 --
 
 All Kubernetes Objects:
@@ -109,6 +125,7 @@ Cluster API versions and extensions
 Scheduler/controller-manager states
 
 What's NOT Included ❌
+
 --
 
 Node Components:
