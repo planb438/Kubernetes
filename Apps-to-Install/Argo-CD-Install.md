@@ -6,7 +6,7 @@
 
 Here's a step-by-step guide to install Argo CD in your cluster, with Git documentation best practices. I'll include commands, verification steps, and how to structure your Git repo.
 
--
+---
 
 Step 1: Prerequisites
 Working Kubernetes Cluster (You already have this)
@@ -18,6 +18,9 @@ Git Repository (Initialize one if you haven’t)
 bash
 mkdir argocd-setup && cd argocd-setup
 git init
+
+--
+
 Step 2: Install Argo CD
 A. Create Namespace
 bash
@@ -36,6 +39,8 @@ argocd-applicationset-controller (GitOps engine)
 
 argocd-repo-server (Git sync)
 
+--
+
 Step 3: Access Argo CD
 A. Expose Argo CD UI
 Option 1: NodePort (Quick Start)
@@ -47,6 +52,8 @@ Get the NodePort:
 bash
 kubectl get svc -n argocd argocd-server
 Access: http://<worker-node-ip>:<NodePort>
+
+-
 
 Option 2: Ingress (Production)
 
@@ -81,6 +88,8 @@ bash
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
 Save this password securely!
 
+--
+
 Step 4: Configure CLI (Optional but Recommended)
 bash
 curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
@@ -90,6 +99,9 @@ Login via CLI:
 
 bash
 argocd login <argocd-server-address> --username admin --password <password-from-step-3b>
+
+--
+
 Step 5: Document in Git
 A. Structure Your Repo
 text
@@ -116,6 +128,9 @@ git add .
 git commit -m "Initial Argo CD installation manifests"
 git remote add origin <your-git-repo-url>
 git push -u origin main
+
+--
+
 Step 6: Deploy Your First App via Argo CD
 A. Create an Application Manifest
 bash
@@ -145,6 +160,8 @@ CLI:
 bash
 kubectl apply -f apps/my-app.yaml
 UI: Go to Argo CD → "+ New App" → Paste YAML.
+
+--
 
 Step 7: Verify Sync
 bash
