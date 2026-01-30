@@ -7,8 +7,12 @@
 
 ## Audit Log Simulation & Forensics
 
+---
+
 📜 PART 2: Audit Log Simulation & Forensics
 Now that your cluster is running, let’s simulate and review audit logs.
+
+---
 
 ⚙️ Step 1: Enable Audit Logging (If Not Already)
 Ensure kube-apiserver has this flag (check with ps aux | grep kube-apiserver):
@@ -33,6 +37,8 @@ rules:
 
 Then restart kube-apiserver (may require updating static pod manifest at /etc/kubernetes/manifests/kube-apiserver.yaml).
 
+---
+ 
 🔥 Step 2: Trigger Suspicious Events
 For example:
 
@@ -60,6 +66,7 @@ spec:
     securityContext:
       privileged: true
 
+---
 
 
 🔎 Step 3: Analyze Logs
