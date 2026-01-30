@@ -1,6 +1,12 @@
 ## Pod Security Admission (PSA)
+
+---
+
 Great lets dive into Pod Security Admission (PSA). This is a core Kubernetes-native mechanism for enforcing pod-level security, replacing the deprecated PodSecurityPolicy (PSP).
+
  very CKS-relevant, and lightweight compared to third-party policy engines like Kyverno or OPA/Gatekeeper.
+
+---
 
 Pod Security Admission (PSA) Overview
 
@@ -75,7 +81,7 @@ You should see an error like:
 
 Error from server: pod "bad-pod" is forbidden: violates PodSecurity "restricted:latest"
 
-
+---
 
 PSA Tips for the CKS
 
