@@ -6,6 +6,8 @@
 
 ### SBOM
 
+---
+
 Introduction to Software Bill of Materials (SBOM) and Its Importance in Software Supply Chain Security
 A Software Bill of Materials (SBOM) is a comprehensive inventory of all components, libraries, and modules within a piece of software. It is crucial for ensuring software supply chain security by providing transparency and allowing organizations to identify and address vulnerabilities efficiently.
 SBOMs enable:
@@ -15,6 +17,7 @@ SBOMs enable:
 
 By adopting SBOMs, organizations can enhance their security posture and reduce risks associated with third-party software components.
 
+---
 
 Download the Syft tool and move the binary to /usr/local/bin.
 
@@ -22,6 +25,7 @@ curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -
 
 syft --help
 
+---
 
 Grype A vulnerability scanner for container images, filesystems, and SBOMs
 Download the Grype tool and move the binary to /usr/local/bin.
@@ -35,7 +39,7 @@ You can also pipe in Syft JSON directly:
  syft yourimage:tag -o json | grype
  
  
- 
+ ---
  
  
 Automating SBOM Generation in CI/CD
@@ -46,6 +50,8 @@ By the end of this lab, participants will be able to:
 • Use Syft to generate SBOMs in a CI/CD environment.
 • Configure artifact uploading in GitHub Actions.
 • Interpret and utilize the generated SBOM in a CI/CD context.
+
+---
 
 Follow the instructions below to configure your GitHub credential before going to the next questions.
 
@@ -59,6 +65,7 @@ vi /root/github_repo_info.json
 
 Refer to this document if you're not sure how to get your own access token: Managing your personal access tokens
 
+---
 
 Fork the Repository - https://github.com/iampsrv/supply_chain_security to use as a starting point.
 • Note that the Repository name is supply_chain_security (do not change it).
