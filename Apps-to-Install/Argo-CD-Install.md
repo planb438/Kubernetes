@@ -24,7 +24,8 @@ git init
 Step 2: Install Argo CD
 A. Create Namespace
 bash
-kubectl create namespace argocd
+
+
 B. Apply Official Manifest
 bash
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
@@ -80,9 +81,12 @@ spec:
             port:
               number: 80
 EOF
+
+---
+
 B. Retrieve Admin Password
 
---
+-
 
 bash
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
