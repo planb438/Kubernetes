@@ -1,0 +1,15 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sDisallowedPrivileged
+metadata:
+  name: disallow-privileged-containers
+  annotations:
+    cks.exercise: "02-opa-gatekeeper"
+    enforcement-action: "deny"
+spec:
+  enforcementAction: "deny"  # Can be "deny" or "dryrun" for learning
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaces: ["cks-gatekeeper-lab"]  # Only apply to our lab namespace
+  parameters: {}

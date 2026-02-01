@@ -1,0 +1,15 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sRequiredLabels
+metadata:
+  name: require-cks-labels
+spec:
+  enforcementAction: "dryrun"  # Audit only, don't block
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaces: ["cks-gatekeeper-lab"]
+  parameters:
+    labels:
+      - key: "cks.exercise"
+        allowedValues: ["02-opa-gatekeeper"]

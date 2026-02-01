@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-good-pod
+  namespace: cks-gatekeeper-lab
+  annotations:
+    cks.exercise: "02-opa-gatekeeper"
+    cks.task: "Test compliant pod deployment"
+    cks.expected: "This pod should be ACCEPTED"
+spec:
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: unprivileged-container
+    image: busybox:latest
+    command: ["sleep", "3600"]
+    securityContext:
+      privileged: false
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-success-instructions
+  namespace: cks-gatekeeper-lab
+data:
+  test-case: "good-pod"
+  expected-result: "acceptance"
+  command: "kubectl apply -f test-good-pod.yaml"

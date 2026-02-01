@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gatekeeper-policies
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"  # Deploys AFTER gatekeeper
+    argocd.argoproj.io/compare-options: IgnoreExtraneous
+  labels:
+    component: cks-lab
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/planb438/Kubernetes.git
+    targetRevision: main
+    path: gitops/clusters/cks-lab/manifests/02-opa-gatekeeper
+    directory:
+      recurse: true
+      exclude: namespace.yaml  # Exclude namespace, we'll use different one
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gatekeeper-system  # Policies go in gatekeeper namespace
+  syncPolicy:
+    automated:
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=false  # Don't create, policies go to existing namespace

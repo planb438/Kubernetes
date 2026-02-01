@@ -1,0 +1,33 @@
+# For installing via Helm chart
+replicaCount: 1
+
+image:
+  repository: openpolicyagent/gatekeeper
+  tag: v3.15.0
+
+audit:
+  interval: 60  # Seconds between audits
+
+validatingWebhookTimeoutSeconds: 3
+
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "100m"
+  limits:
+    memory: "1Gi"
+    cpu: "500m"
+
+# Enable experimental features
+experimentalEnableMutation: false
+disableValidatingWebhook: false
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
