@@ -1,0 +1,22 @@
+# kind Cluster configuration WITH encryption-at-rest enabled
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  kubeadmConfigPatches:
+  - |
+    kind: ClusterConfiguration
+    apiServer:
+      extraArgs:
+        # Enable encryption at rest for secrets
+        encryption-provider-config: /etc/kubernetes/encryption/encryption-config.yaml
+      extraVolumes:
+        - name: encryption-config
+          hostPath: /etc/kubernetes/encryption
+          mountPath: /etc/kubernetes/encryption
+          readOnly: true
+          pathType: DirectoryOrCreate
+  extraMounts:
+    - hostPath: ./encryption-config
+      containerPath: /etc/kubernetes/encryption
+      readOnly: true

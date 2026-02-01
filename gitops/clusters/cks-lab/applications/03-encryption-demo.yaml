@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: encryption-demo
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/bitnami/charts
+    chart: sealed-secrets
+    targetRevision: 2.14.0
+    helm:
+      parameters:
+      - name: fullnameOverride
+        value: kubeseal
+      - name: secretName
+        value: sealed-secrets-key
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system

@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: encryption-simulator
+  namespace: argocd
+  annotations:
+    cks.exercise: "03-encryption-at-rest"
+    cks.objective: "Understand encryption at rest concepts and implementation"
+    cks.difficulty: "advanced"
+    cks.time: "60 minutes"
+    cks.warning: "SIMULATION ONLY - Does not modify actual kube-apiserver"
+  labels:
+    category: security
+    component: cks-lab
+    simulation: "true"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/planb438/Kubernetes.git
+    targetRevision: main
+    path: gitops/clusters/cks-lab/manifests/03-encryption-at-rest
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: encryption-sim-lab
+  syncPolicy:
+    automated:
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true

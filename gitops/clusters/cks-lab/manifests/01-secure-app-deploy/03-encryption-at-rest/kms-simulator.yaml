@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kms-simulator
+  namespace: encryption-sim-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kms-simulator
+  template:
+    metadata:
+      labels:
+        app: kms-simulator
+    spec:
+      containers:
+      - name: simulator
+        image: nginx:alpine
+        env:
+        - name: KMS_SIMULATION
+          value: "true"
+        - name: KEY_ROTATION_INTERVAL
+          value: "90d"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kms-simulator
+  namespace: encryption-sim-lab
+spec:
+  selector:
+    app: kms-simulator
+  ports:
+  - port: 443
+    targetPort: 443

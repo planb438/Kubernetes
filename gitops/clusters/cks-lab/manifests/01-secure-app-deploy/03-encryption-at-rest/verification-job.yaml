@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verify-encryption-simulation
+  namespace: encryption-sim-lab
+  annotations:
+    cks.exercise: "03-encryption-at-rest"
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: verifier
+        image: bitnami/kubectl:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "=== Encryption at Rest Simulation ==="
+          echo ""
+          echo "1. Checking secret types..."
+          kubectl get secrets -n encryption-sim-lab
+          echo ""
+          echo "2. Plaintext secret (in base64 but readable in etcd):"
+          kubectl get secret plaintext-secret -n encryption-sim-lab -o jsonpath='{.data.password}' | base64 -d
+          echo ""
+          echo "3. Base64 encoded secret (still readable in etcd):"
+          kubectl get secret base64-encoded-secret -n encryption-sim-lab -o jsonpath='{.data.api-key}' | base64 -d
+          echo ""
+          echo "4. SealedSecret (ACTUALLY encrypted, cannot be read from etcd):"
+          echo "   This would be encrypted in etcd IF using encryption-at-rest"
+          echo ""
+          echo "=== SIMULATION COMPLETE ==="
+          echo "In a real cluster with encryption-at-rest enabled:"
+          echo "- All secrets would be encrypted in etcd"
+          echo "- Encryption key would be managed separately"
+          echo "- KMS or cloud provider key management recommended"
