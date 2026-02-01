@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cks-01-secure-app-deploy
+  namespace: argocd
+  annotations:
+    cks.exercise: "01-secure-app-deploy"
+    cks.objective: "Deploy secure application with policy enforcement"
+    cks.difficulty: "beginner"
+    cks.time: "30 minutes"
+  labels:
+    category: security
+    component: cks-lab
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/planb438/Kubernetes.git
+    targetRevision: main
+    path: gitops/clusters/cks-lab/manifests/01-secure-app-deploy
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cks-secure-app
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: false  # Manual pruning for learning
+    syncOptions:
+    - CreateNamespace=true
+    - ApplyOutOfSyncOnly=true

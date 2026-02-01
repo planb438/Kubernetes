@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kyverno-policies
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://kyverno.github.io/kyverno/
+    chart: kyverno
+    targetRevision: 3.0.0
+    helm:
+      parameters:
+      - name: installCRDs
+        value: "true"
+      - name: replicaCount
+        value: "1"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kyverno
+  syncPolicy:
+    automated:
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: security-policies
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/planb438/Kubernetes.git
+    targetRevision: main
+    path: gitops/clusters/cks-lab/manifests/01-secure-app-deploy
+    directory:
+      include: kyverno-policy.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kyverno

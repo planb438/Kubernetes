@@ -1,0 +1,49 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-privileged
+  annotations:
+    policies.kyverno.io/title: Disallow Privileged Containers
+    policies.kyverno.io/category: Security
+    policies.kyverno.io/severity: high
+    cks.exercise: "01-secure-app-deploy"
+spec:
+  validationFailureAction: enforce
+  background: true
+  rules:
+  - name: no-privileged-containers
+    match:
+      resources:
+        kinds:
+        - Pod
+        namespaces:
+        - cks-secure-app
+    validate:
+      message: "Privileged containers are not allowed per CKS security policy"
+      pattern:
+        spec:
+          containers:
+          - =(securityContext):
+              =(privileged): "false"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-seccomp-profile
+  annotations:
+    cks.exercise: "01-secure-app-deploy"
+spec:
+  validationFailureAction: audit  # Start with audit, then enforce
+  rules:
+  - name: check-seccomp
+    match:
+      resources:
+        kinds:
+        - Pod
+    validate:
+      message: "Seccomp profile must be set to RuntimeDefault or Localhost"
+      pattern:
+        spec:
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault

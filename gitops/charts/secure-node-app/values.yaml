@@ -1,0 +1,52 @@
+# Secure defaults
+replicaCount: 2
+
+image:
+  repository: bitnami/node
+  tag: 20-alpine  # Specific, non-latest tag
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 3000
+  annotations:
+    security.cks/lab: "01-secure-app-deploy"
+
+# Security hardening
+securityContext:
+  enabled: true
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 1001
+
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Health checks
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 3000
+  initialDelaySeconds: 30  # Increased for safety
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+
+# Network policy
+networkPolicy:
+  enabled: true
+  allowExternal: false

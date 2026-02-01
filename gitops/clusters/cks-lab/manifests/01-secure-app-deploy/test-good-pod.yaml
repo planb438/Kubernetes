@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-good-pod
+  namespace: cks-secure-app
+  annotations:
+    cks.exercise: "01-secure-app-deploy"
+    cks.task: "Test compliant pod deployment"
+    cks.expected: "This pod should be ACCEPTED"
+spec:
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: busybox
+    image: busybox:latest
+    command: ["sleep", "3600"]
+    securityContext:
+      privileged: false
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
