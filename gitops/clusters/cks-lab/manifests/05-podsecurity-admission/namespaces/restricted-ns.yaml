@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: psa-restricted
+  labels:
+    # RESTRICTED: Hardened security profile
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.29
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit-version: v1.29
+    pod-security.kubernetes.io/warn-version: v1.29
+  annotations:
+    cks.exercise: "05-pod-security-admission"
+    cks.level: "restricted"
+    description: "Hardened workloads, maximum security"
+    psa.requirements: |
+      - Must run as non-root (runAsNonRoot=true)
+      - Must not allow privilege escalation
+      - Must drop ALL capabilities
+      - Must use readOnlyRootFilesystem
+      - Must use seccomp profile (RuntimeDefault or Localhost)

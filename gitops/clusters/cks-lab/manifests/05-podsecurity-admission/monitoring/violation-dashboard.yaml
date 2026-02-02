@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: psa-dashboard
+  namespace: psa-lab
+data:
+  dashboard.json: |
+    {
+      "title": "PSA Compliance Dashboard",
+      "panels": [
+        {
+          "title": "Namespace PSA Levels",
+          "type": "stat",
+          "targets": [
+            {
+              "query": "count by (level) (kube_namespace_labels{label_pod_security_kubernetes_io_enforce!=\"\"})"
+            }
+          ]
+        },
+        {
+          "title": "PSA Violations (Last 24h)",
+          "type": "graph",
+          "targets": [
+            {
+              "query": "count_over_time(kube_audit_events{verb=\"create\",resource=\"pods\",reason=\"PodSecurity\"}[24h])"
+            }
+          ]
+        }
+      ]
+    }

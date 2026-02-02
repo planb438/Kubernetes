@@ -1,3 +1,34 @@
+Kubernetes/gitops/
+├── clusters/
+│   └── cks-lab/
+│       ├── applications/
+│       │   ├── 04-pod-security-context.yaml
+│       │   ├── 04-psa-policies.yaml
+│       │   └── 04-audit-tools.yaml
+│       └── manifests/
+│           └── 04-pod-security-context/
+│               ├── namespace.yaml
+│               ├── 01-run-as-non-root/
+│               │   ├── good-pod.yaml
+│               │   ├── bad-pod.yaml
+│               │   └── test-job.yaml
+│               ├── 02-readonly-rootfs/
+│               ├── 03-seccomp-profile/
+│               ├── 04-drop-capabilities/
+│               ├── 05-user-group/
+│               ├── comprehensive-example.yaml
+│               ├── psa-policies.yaml
+│               └── README-exercise.md
+├── policies/
+│   └── pod-security-standards/
+│       ├── baseline.yaml
+│       ├── restricted.yaml
+│       └── privileged.yaml
+└── tools/
+    └── security-audit/
+        ├── kube-bench-job.yaml
+        └── kube-hunter-scan.yaml
+
 markdown
 # CKS Exercise 04: Pod Security Context Mastery
 

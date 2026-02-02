@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cks-05-pod-security-admission
+  namespace: argocd
+  annotations:
+    cks.exercise: "05-pod-security-admission"
+    cks.objective: "Master Kubernetes Pod Security Admission (PSA)"
+    cks.difficulty: "advanced"
+    cks.time: "120 minutes"
+    cks.importance: "CRITICAL - Replaces PodSecurityPolicies"
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    category: security
+    component: cks-lab
+    standard: "PSA"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/planb438/Kubernetes.git
+    targetRevision: main
+    path: gitops/clusters/cks-lab/manifests/05-podsecurity-admission
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: psa-lab
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: false
+    syncOptions:
+    - CreateNamespace=true

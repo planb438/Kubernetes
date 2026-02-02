@@ -1,3 +1,24 @@
+Kubernetes/gitops/
+├── clusters/
+│   └── cks-lab/
+│       ├── applications/
+│       │   ├── 02-opa-gatekeeper.yaml
+│       │   └── 02-gatekeeper-policies.yaml
+│       └── manifests/
+│           └── 02-opa-gatekeeper/
+│               ├── namespace.yaml
+│               ├── constraint-template.yaml
+│               ├── constraint.yaml
+│               ├── test-bad-pod.yaml
+│               ├── test-good-pod.yaml
+│               ├── audit-policy.yaml
+│               └── README-exercise.md
+├── charts/
+│   └── gatekeeper/
+│       └── values.yaml  # For Helm install
+└── bootstrap/
+    └── cks-02-bootstrap.yaml
+
 markdown
 # CKS Exercise 02: OPA Gatekeeper Policy Enforcement
 

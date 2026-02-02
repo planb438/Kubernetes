@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: psa-exempt-namespace
+  labels:
+    # This ENTIRE namespace is exempt from PSA
+    # (Configured via AdmissionConfiguration)
+    exemptions.security.kubernetes.io/pod-security: "psa-exempt-namespace"
+  annotations:
+    reason: "Legacy applications that cannot be modified"
+    sunset-date: "2024-12-31"
+    owner: "platform-team@company.com"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: exemption-documentation
+  namespace: psa-exempt-namespace
+data:
+  requirements.md: |
+    # PSA Exemption Requirements
+    
+    ## To qualify for exemption:
+    1. **Business Justification**: Critical application that cannot be modified
+    2. **Risk Assessment**: Documented security risks and mitigations
+    3. **Sunset Plan**: Timeline for remediation or decommissioning
+    4. **Compensating Controls**: Additional security measures in place
+    
+    ## Compensating Controls (Required):
+    - Network policies restricting traffic
+    - Runtime security monitoring (Falco, Tracee)
+    - Regular vulnerability scanning
+    - Limited access (RBAC restrictions)
+    
+    ## Review Process:
+    - Monthly security review
+    - Quarterly risk reassessment
+    - Annual exemption renewal

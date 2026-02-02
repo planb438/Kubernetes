@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secure-web-app
+  namespace: psa-restricted  # Will be ACCEPTED
+  annotations:
+    cks.exercise: "05-pod-security-admission"
+    cks.example: "secure-workload"
+    cks.compliance: "restricted"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: secure-web
+  template:
+    metadata:
+      labels:
+        app: secure-web
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/nginx: runtime/default
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: web
+        image: nginxinc/nginx-unprivileged:alpine
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+          readOnly: false
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+          readOnly: false
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 20
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: nginx-cache
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: secure-web-service
+  namespace: psa-restricted
+spec:
+  selector:
+    app: secure-web
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: ClusterIP

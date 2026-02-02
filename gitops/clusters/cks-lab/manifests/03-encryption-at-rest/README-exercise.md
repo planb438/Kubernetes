@@ -1,3 +1,24 @@
+Kubernetes/gitops/
+├── clusters/
+│   └── cks-lab/
+│       ├── applications/
+│       │   ├── 03-encryption-simulator.yaml
+│       │   └── 03-encryption-demo.yaml
+│       └── manifests/
+│           └── 03-encryption-at-rest/
+│               ├── simulated-etcd-operator.yaml
+│               ├── encryption-sim-config.yaml
+│               ├── test-secrets.yaml
+│               ├── verification-job.yaml
+│               ├── kms-simulator.yaml
+│               └── README-exercise.md
+├── scripts/
+│   └── kind-with-encryption/
+│       ├── kind-encrypted-cluster.yaml
+│       └── setup-encrypted-cluster.sh
+└── labs/
+    └── 03-encryption-walkthrough.md
+
 markdown
 # CKS Exercise 03: Encryption at Rest (SIMULATION)
 

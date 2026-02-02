@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: psa-audit-report
+  namespace: psa-lab
+spec:
+  schedule: "0 2 * * *"  # 2 AM daily
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+          - name: auditor
+            image: bitnami/kubectl:latest
+            command: ["/bin/sh", "-c"]
+            args:
+            - |
+              echo "=== Pod Security Admission Audit Report ==="
+              echo "Generated: $(date)"
+              echo ""
+              
+              echo "## 1. Namespace PSA Labels"
+              kubectl get namespaces -L pod-security.kubernetes.io/enforce \
+                -L pod-security.kubernetes.io/audit \
+                -L pod-security.kubernetes.io/warn
+              echo ""
+              
+              echo "## 2. Violation Check"
+              echo "Checking for pods violating PSA policies..."
+              # This would query audit logs in production
+              
+              echo "## 3. Recommendations"
+              echo "- Namespaces without PSA labels: Add 'warn' level"
+              echo "- Namespaces with only 'warn': Consider 'audit'"
+              echo "- Namespaces with 'audit': Consider 'enforce'"
+              echo ""
+              
+              echo "=== Report Complete ==="

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: root-pod-test
+  namespace: psa-restricted  # Will be REJECTED
+  annotations:
+    cks.exercise: "05-pod-security-admission"
+    cks.test: "root-pod"
+    cks.expected: "REJECTED"
+spec:
+  containers:
+  - name: app
+    image: nginx:alpine  # Runs as root by default
+    # No securityContext specified = runs as root
+    # ❌ VIOLATION: runAsNonRoot required in restricted namespace

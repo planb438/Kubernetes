@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: privileged-pod-test
+  namespace: psa-restricted  # Will be REJECTED by PSA
+  annotations:
+    cks.exercise: "05-pod-security-admission"
+    cks.test: "privileged-pod"
+    cks.expected: "REJECTED"
+spec:
+  containers:
+  - name: hacker
+    image: busybox:latest
+    command: ["sleep", "3600"]
+    securityContext:
+      privileged: true  # ❌ VIOLATION: Privileged containers not allowed in restricted
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-privileged-pod
+  namespace: psa-restricted
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: tester
+        image: bitnami/kubectl:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "=== Testing PSA: Privileged Pod in Restricted Namespace ==="
+          echo ""
+          echo "Attempting to create privileged pod..."
+          kubectl apply -f privileged-pod.yaml 2>&1 | tee /tmp/psa-test.log
+          echo ""
+          echo "Expected Result: REJECTED with PSA violation message"
+          echo ""
+          if grep -q "violates PodSecurity" /tmp/psa-test.log; then
+            echo "✅ TEST PASSED: PSA correctly rejected privileged pod"
+            exit 0
+          else
+            echo "❌ TEST FAILED: PSA did not reject as expected"
+            exit 1
+          fi

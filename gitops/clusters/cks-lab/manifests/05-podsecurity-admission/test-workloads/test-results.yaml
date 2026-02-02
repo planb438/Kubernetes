@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: psa-test-results
+  namespace: psa-lab
+data:
+  test-matrix.md: |
+    # PSA Test Matrix
+    
+    | Namespace Level | Privileged Pod | Root Pod | Secure Pod | Expected Result |
+    |----------------|----------------|----------|------------|-----------------|
+    | **Privileged** | ✅ Allowed     | ✅ Allowed | ✅ Allowed | No restrictions |
+    | **Baseline**   | ❌ Rejected    | ✅ Allowed | ✅ Allowed | Basic protections |
+    | **Restricted** | ❌ Rejected    | ❌ Rejected | ✅ Allowed | Maximum security |
+    
+    ## PSA Labels Explained:
+    
+    ### Enforcement Modes:
+    1. **enforce**: Pods violating policy will be rejected
+    2. **audit**: Violations are logged but allowed
+    3. **warn**: Users get warning but pods are created
+    
+    ### Security Levels:
+    1. **privileged**: Unrestricted (for kube-system, etc.)
+    2. **baseline**: Minimal restrictions (prevents known escalations)
+    3. **restricted**: Hardened (follows security best practices)
+    
+    ## Migration Path:
+    ```
+    Current: No PSA → Add warn labels → Add audit labels → Add enforce labels
+    Timeline: Week 1 → Week 2 → Week 3 → Week 4
+    ```

@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: psa-baseline
+  labels:
+    # BASELINE: Prevents known privilege escalations
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: v1.29
+    pod-security.kubernetes.io/audit: baseline
+    pod-security.kubernetes.io/warn: baseline
+    pod-security.kubernetes.io/audit-version: v1.29
+    pod-security.kubernetes.io/warn-version: v1.29
+  annotations:
+    cks.exercise: "05-pod-security-admission"
+    cks.level: "baseline"
+    description: "Legacy workloads, minimum restrictions"
+    psa.requirements: |
+      - Must not run privileged containers
+      - Must not use host namespaces
+      - Must not use host volumes
+      - Must not use specific capabilities

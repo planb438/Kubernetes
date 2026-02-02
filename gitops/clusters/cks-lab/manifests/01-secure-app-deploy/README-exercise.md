@@ -1,3 +1,25 @@
+Kubernetes/gitops/
+├── clusters/
+│   └── cks-lab/
+│       ├── applications/
+│       │   ├── 01-secure-app-deploy.yaml
+│       │   └── 01-kyverno-policies.yaml
+│       └── manifests/
+│           └── 01-secure-app-deploy/
+│               ├── namespace.yaml
+│               ├── kyverno-policy.yaml
+│               ├── test-bad-pod.yaml
+│               ├── test-good-pod.yaml
+│               └── README-exercise.md
+├── charts/
+│   └── secure-node-app/
+│       ├── Chart.yaml
+│       ├── values.yaml
+│       └── templates/
+│           └── deployment.yaml
+└── bootstrap/
+    └── cks-bootstrap.yaml
+
 markdown
 # CKS Exercise 01: Secure Application Deployment with GitOps
 
