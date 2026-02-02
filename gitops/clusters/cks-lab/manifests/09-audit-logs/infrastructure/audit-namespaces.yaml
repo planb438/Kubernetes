@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: audit-system
+  labels:
+    cks-lab: "09-audit-logs"
+    audit: enabled
+    purpose: "audit-infrastructure"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: audit-test
+  labels:
+    cks-lab: "09-audit-logs"
+    audit: enabled
+    purpose: "audit-testing"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: audit-monitoring
+  labels:
+    cks-lab: "09-audit-logs"
+    audit: enabled
+    purpose: "audit-monitoring"

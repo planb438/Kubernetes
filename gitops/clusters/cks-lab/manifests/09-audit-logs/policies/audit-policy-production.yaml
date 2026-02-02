@@ -1,0 +1,33 @@
+apiVersion: audit.k8s.io/v1
+kind: Policy
+metadata:
+  name: audit-policy-production
+  namespace: audit-system
+rules:
+  # PCI-DSS compliance requirements
+  - level: RequestResponse
+    resources:
+      - group: ""
+        resources: ["secrets"]
+    namespaces: ["*"]
+  
+  # HIPAA compliance - all access to PHI resources
+  - level: Request
+    resources:
+      - group: ""
+        resources: ["pods", "services", "configmaps", "persistentvolumeclaims"]
+    namespaces: ["hipaa-data", "phi-storage"]
+  
+  # All administrative actions
+  - level: Request
+    users: ["system:admin", "cluster-admin"]
+    namespaces: ["*"]
+  
+  # All authentication failures
+  - level: Request
+    userGroups: ["system:unauthenticated"]
+  
+  # SOC 2 - all modifications
+  - level: Request
+    verbs: ["create", "update", "patch", "delete"]
+    namespaces: ["*"]

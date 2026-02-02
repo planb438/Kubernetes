@@ -1,3 +1,50 @@
+Kubernetes/gitops/
+├── clusters/
+│   └── cks-lab/
+│       ├── applications/
+│       │   ├── 07-private-registry.yaml
+│       │   ├── 07-image-pull-secrets.yaml
+│       │   └── 07-registry-scanning.yaml
+│       └── manifests/
+│           └── 07-private-registry/
+│               ├── registries/
+│               │   ├── docker-hub.yaml
+│               │   ├── ghcr.yaml
+│               │   ├── ecr.yaml
+│               │   ├── gcr.yaml
+│               │   └── acr.yaml
+│               ├── secrets/
+│               │   ├── image-pull-secrets.yaml
+│               │   ├── external-secrets.yaml
+│               │   └── sealed-secrets.yaml
+│               ├── workloads/
+│               │   ├── secure-deployment.yaml
+│               │   ├── insecure-deployment.yaml
+│               │   └── multi-registry-deployment.yaml
+│               ├── policies/
+│               │   ├── image-pull-policy.yaml
+│               │   ├── allowed-registries.yaml
+│               │   ├── image-scanning.yaml
+│               │   └── signature-verification.yaml
+│               ├── testing/
+│               │   ├── registry-connectivity.yaml
+│               │   ├── secret-rotation.yaml
+│               │   └── image-validation.yaml
+│               ├── tools/
+│               │   ├── registry-cache.yaml
+│               │   ├── image-scan-job.yaml
+│               │   └── vulnerability-scanner.yaml
+│               └── README-exercise.md
+├── policies/
+│   └── image-security/
+│       ├── allowed-registries.yaml
+│       ├── image-pull-policies.yaml
+│       └── scan-policies.yaml
+└── tools/
+    └── registry-management/
+        ├── registry-proxy.yaml
+        └── image-sync.yaml
+
 markdown
 # CKS Exercise 07: Private Registry & Image Security
 

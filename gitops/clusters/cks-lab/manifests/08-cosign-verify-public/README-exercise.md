@@ -1,3 +1,61 @@
+Kubernetes/gitops/
+├── clusters/
+│   └── cks-lab/
+│       ├── applications/
+│       │   ├── 08-cosign-verification.yaml
+│       │   ├── 08-sigstore-infrastructure.yaml
+│       │   └── 08-image-signing-pipeline.yaml
+│       └── manifests/
+│           └── 08-cosign-verify-public/
+│               ├── infrastructure/
+│               │   ├── kyverno-install.yaml
+│               │   ├── cosign-install.yaml
+│               │   ├── fulcio-config.yaml
+│               │   ├── rekor-config.yaml
+│               │   └── ctl-install.yaml
+│               ├── policies/
+│               │   ├── cosign-verification.yaml
+│               │   ├── allowed-signers.yaml
+│               │   ├── attestation-verification.yaml
+│               │   ├── sbom-verification.yaml
+│               │   └── vulnerability-scan.yaml
+│               ├── signing/
+│               │   ├── key-management.yaml
+│               │   ├── sign-image-job.yaml
+│               │   ├── generate-keys.yaml
+│               │   └── key-rotation.yaml
+│               ├── workloads/
+│               │   ├── signed-workloads/
+│               │   │   ├── verified-deployment.yaml
+│               │   │   ├── attested-pod.yaml
+│               │   │   └── sbom-verified.yaml
+│               │   ├── unsigned-workloads/
+│               │   │   ├── unsigned-deployment.yaml
+│               │   │   └── test-rejection.yaml
+│               │   └── malicious-workloads/
+│               │       ├── tampered-image.yaml
+│               │       └── wrong-signer.yaml
+│               ├── pipelines/
+│               │   ├── github-actions-signing.yaml
+│               │   ├── gitlab-ci-signing.yaml
+│               │   └── jenkins-signing.yaml
+│               ├── testing/
+│               │   ├── verification-tests.yaml
+│               │   ├── policy-tests.yaml
+│               │   └── end-to-end-test.yaml
+│               └── README-exercise.md
+├── tools/
+│   └── sigstore-tools/
+│       ├── cosign-webhook.yaml
+│       ├── rekor-search.yaml
+│       └── transparency-log-viewer.yaml
+└── policies/
+    └── supply-chain/
+        ├── slsa-requirements.yaml
+        ├── spdx-requirements.yaml
+        └── attestation-format.yaml
+
+
 markdown
 # CKS Exercise 08: Supply Chain Security with Cosign
 

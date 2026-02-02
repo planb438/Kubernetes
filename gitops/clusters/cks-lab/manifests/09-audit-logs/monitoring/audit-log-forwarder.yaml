@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: audit-log-forwarder
+  namespace: audit-monitoring
+  labels:
+    app: audit-log-forwarder
+spec:
+  selector:
+    matchLabels:
+      app: audit-log-forwarder
+  template:
+    metadata:
+      labels:
+        app: audit-log-forwarder
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: fluent-bit
+        image: fluent/fluent-bit:latest
+        command: ["/fluent-bit/bin/fluent-bit"]
+        args: ["-c", "/fluent-bit/etc/fluent-bit.conf"]
+        volumeMounts:
+        - name: audit-logs
+          mountPath: /var/log/kubernetes
+          readOnly: true
+        - name: config
+          mountPath: /fluent-bit/etc
+      volumes:
+      - name: audit-logs
+        hostPath:
+          path: /var/log/kubernetes
+          type: Directory
+      - name: config
+        configMap:
+          name: fluent-bit-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+  namespace: audit-monitoring
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush        5
+        Daemon       Off
+        Log_Level    info
+    
+    [INPUT]
+        Name         tail
+        Path         /var/log/kubernetes/audit.log
+        Tag          k8s-audit
+        Parser       json
+    
+    [OUTPUT]
+        Name         stdout
+        Match        *
+    
+    [FILTER]
+        Name         grep
+        Match        k8s-audit
+        Regex        namespaceName audit-test

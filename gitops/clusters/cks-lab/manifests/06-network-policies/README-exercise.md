@@ -1,3 +1,51 @@
+Kubernetes/gitops/
+├── clusters/
+│   └── cks-lab/
+│       ├── applications/
+│       │   ├── 06-network-policies.yaml
+│       │   ├── 06-namespace-setup.yaml
+│       │   └── 06-policy-validation.yaml
+│       └── manifests/
+│           └── 06-network-policies/
+│               ├── namespaces/
+│               │   ├── tiered-namespaces.yaml
+│               │   ├── environment-namespaces.yaml
+│               │   └── team-namespaces.yaml
+│               ├── workloads/
+│               │   ├── frontend/
+│               │   │   ├── deployment.yaml
+│               │   │   ├── service.yaml
+│               │   │   └── ingress.yaml
+│               │   ├── backend/
+│               │   ├── database/
+│               │   └── monitoring/
+│               ├── policies/
+│               │   ├── 01-deny-all.yaml
+│               │   ├── 02-namespace-isolation.yaml
+│               │   ├── 03-tiered-access.yaml
+│               │   ├── 04-egress-controls.yaml
+│               │   ├── 05-dns-policies.yaml
+│               │   ├── 06-cidr-based.yaml
+│               │   └── 07-port-restrictions.yaml
+│               ├── testing/
+│               │   ├── network-tests.yaml
+│               │   ├── penetration-test.yaml
+│               │   └── validation-job.yaml
+│               ├── tools/
+│               │   ├── network-scanner.yaml
+│               │   ├── policy-generator.yaml
+│               │   └── visualization.yaml
+│               └── README-exercise.md
+├── policies/
+│   └── network-security/
+│       ├── baseline-policies.yaml
+│       ├── egress-default-deny.yaml
+│       └── namespace-defaults.yaml
+└── tools/
+    └── network-audit/
+        ├── netpol-scanner.yaml
+        └── traffic-visualizer.yaml
+
 markdown
 # CKS Exercise 06: Network Policies & Zero-Trust Security
 

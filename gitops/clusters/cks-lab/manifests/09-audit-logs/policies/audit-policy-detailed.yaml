@@ -1,0 +1,30 @@
+apiVersion: audit.k8s.io/v1
+kind: Policy
+metadata:
+  name: audit-policy-detailed
+  namespace: audit-system
+rules:
+  # Log request-level information for secrets
+  - level: Request
+    resources:
+      - group: ""
+        resources: ["secrets"]
+  
+  # Log metadata for configmaps
+  - level: Metadata
+    resources:
+      - group: ""
+        resources: ["configmaps"]
+  
+  # Log request and response for privileged operations
+  - level: RequestResponse
+    resources:
+      - group: ""
+        resources: ["pods/exec", "pods/attach", "pods/portforward"]
+  
+  # Don't log these common read operations
+  - level: None
+    verbs: ["get", "list", "watch"]
+    resources:
+      - group: ""
+        resources: ["endpoints", "services"]

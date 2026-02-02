@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: 09-audit-testing
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/hook: Sync
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/planb438/Kubernetes.git
+    targetRevision: HEAD
+    path: gitops/clusters/cks-lab/manifests/09-audit-logs/testing
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: audit-test
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false  # Don't auto-delete test resources
+    syncOptions:
+      - CreateNamespace=true

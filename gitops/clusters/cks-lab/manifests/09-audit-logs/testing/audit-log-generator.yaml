@@ -1,0 +1,44 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: audit-log-generator
+  namespace: audit-test
+spec:
+  schedule: "*/5 * * * *"  # Every 5 minutes
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 600
+      template:
+        spec:
+          serviceAccountName: audit-test-runner
+          containers:
+          - name: generator
+            image: bitnami/kubectl:latest
+            command:
+            - /bin/bash
+            - -c
+            - |
+              # Generate various audit events
+              echo "Generating audit events at $(date)"
+              
+              # 1. Create resources
+              kubectl create configmap audit-test-cm-$(date +%s) \
+                --from-literal=key=value \
+                --namespace=audit-test
+              
+              # 2. Modify resources
+              kubectl label namespace audit-test \
+                audit-test-$(date +%s)=true \
+                --overwrite
+              
+              # 3. Access resources
+              kubectl get pods --all-namespaces --output=jsonpath='{.items[*].metadata.name}' > /dev/null
+              
+              # 4. Delete resources
+              kubectl delete configmap --field-selector=metadata.name=audit-test-cm* \
+                --namespace=audit-test \
+                --timeout=10s || true
+              
+              echo "Audit events generated successfully"
+          restartPolicy: OnFailure

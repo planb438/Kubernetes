@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: noisy-audit-deployment
+  namespace: audit-test
+  labels:
+    cks-example: noisy-workload
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: noisy-app
+  template:
+    metadata:
+      labels:
+        app: noisy-app
+        cks-example: noisy-workload
+    spec:
+      serviceAccountName: default
+      containers:
+      - name: noisy-container
+        image: busybox:latest
+        command:
+        - sh
+        - -c
+        - |
+          # This workload constantly accesses Kubernetes API
+          # generating lots of audit logs (example of what NOT to do)
+          while true; do
+            echo "Checking pods..."
+            wget -q -O- http://localhost:8001/api/v1/pods
+            echo "Checking configmaps..."
+            wget -q -O- http://localhost:8001/api/v1/configmaps
+            sleep 1
+          done
+        readinessProbe:
+          httpGet:
+            path: /api/v1/namespaces/default/pods
+            port: 8001
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /api/v1/namespaces/default/services
+            port: 8001
+          periodSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: noisy-service
+  namespace: audit-test
+spec:
+  selector:
+    app: noisy-app
+  ports:
+  - port: 8001
+    targetPort: 8001

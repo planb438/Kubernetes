@@ -1,0 +1,26 @@
+apiVersion: audit.k8s.io/v1
+kind: Policy
+metadata:
+  name: audit-policy-basic
+  namespace: audit-system
+rules:
+  # Log all requests at Metadata level
+  - level: Metadata
+  
+  # Don't log watch requests
+  - level: None
+    users: ["system:kube-proxy"]
+    verbs: ["watch"]
+    resources:
+      - group: ""
+        resources: ["endpoints", "services"]
+  
+  # Don't log authenticated requests to certain non-resource URLs
+  - level: None
+    userGroups: ["system:authenticated"]
+    nonResourceURLs:
+      - "/api*"
+      - "/version"
+      - "/healthz"
+      - "/readyz"
+      - "/livez"
