@@ -1,0 +1,43 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: falco-driver-installer
+  namespace: falco-system
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: falco-installer
+      initContainers:
+      - name: driver-loader
+        image: falcosecurity/falco-driver-loader:latest
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: true
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          echo "Checking kernel version..."
+          uname -r
+          
+          echo "Installing Falco kernel module..."
+          falco-driver-loader bpf
+          
+          echo "Driver installation complete"
+        volumeMounts:
+        - name: host-root
+          mountPath: /host
+          readOnly: false
+      containers:
+      - name: completion-check
+        image: busybox:latest
+        command: ["sh", "-c", "echo 'Driver installation job completed' && sleep 5"]
+      restartPolicy: Never
+      volumes:
+      - name: host-root
+        hostPath:
+          path: /
+          type: Directory

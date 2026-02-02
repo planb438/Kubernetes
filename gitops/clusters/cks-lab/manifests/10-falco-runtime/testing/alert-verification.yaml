@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: falco-alert-verification
+  namespace: falco-test
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: falco-tester
+      containers:
+      - name: verifier
+        image: alpine:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "=== Falco Alert Verification ==="
+          echo ""
+          echo "This job verifies that Falco is properly detecting security events."
+          echo ""
+          echo "Manual verification steps:"
+          echo ""
+          echo "1. Check if Falco pods are running:"
+          echo "   kubectl get pods -n falco-system"
+          echo ""
+          echo "2. View Falco logs:"
+          echo "   kubectl logs -n falco-system -l app.kubernetes.io/name=falco --tail=50"
+          echo ""
+          echo "3. Check for specific alerts:"
+          echo "   kubectl logs -n falco-system -l app.kubernetes.io/name=falco | grep -E 'Terminal shell|Write below binary|Suspicious Network'"
+          echo ""
+          echo "4. Test real-time alerts by running:"
+          echo "   kubectl run test-alert --image=alpine --restart=Never -- sh -c 'touch /usr/bin/test'"
+          echo ""
+          echo "5. View Falco events via webhook (if configured):"
+          echo "   kubectl port-forward -n falco-system svc/falco 2801:2801"
+          echo "   # Then visit http://localhost:2801 in browser"
+          echo ""
+          echo "Expected results:"
+          echo "- Falco pods should be running"
+          echo "- Should see security alerts in logs"
+          echo "- Webhook endpoint should respond"
+          echo ""
+          sleep 60
+          echo "Verification complete"
+      restartPolicy: Never
+  backoffLimit: 0

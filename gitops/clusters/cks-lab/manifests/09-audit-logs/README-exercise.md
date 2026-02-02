@@ -1,3 +1,62 @@
+Kubernetes/gitops/
+├── clusters/
+│   └── cks-lab/
+│       ├── applications/
+│       │   ├── 09-audit-logs-setup.yaml
+│       │   ├── 09-audit-policy.yaml
+│       │   ├── 09-audit-testing.yaml
+│       │   └── 09-audit-monitoring.yaml
+│       └── manifests/
+│           └── 09-audit-logs/
+│               ├── infrastructure/
+│               │   ├── audit-namespaces.yaml
+│               │   ├── audit-service-accounts.yaml
+│               │   └── audit-rbac.yaml
+│               ├── policies/
+│               │   ├── audit-policy-basic.yaml
+│               │   ├── audit-policy-detailed.yaml
+│               │   ├── audit-policy-production.yaml
+│               │   └── audit-policy-development.yaml
+│               ├── workloads/
+│               │   ├── good-workloads/
+│               │   │   ├── compliant-deployment.yaml
+│               │   │   ├── secure-statefulset.yaml
+│               │   │   └── audit-friendly-job.yaml
+│               │   ├── bad-workloads/
+│               │   │   ├── noisy-deployment.yaml
+│               │   │   ├── sensitive-access-pod.yaml
+│               │   │   └── privilege-escalation-attempt.yaml
+│               │   └── test-workloads/
+│               │       ├── secret-accessor.yaml
+│               │       ├── configmap-modifier.yaml
+│               │       └── rbac-tester.yaml
+│               ├── testing/
+│               │   ├── audit-log-generator.yaml
+│               │   ├── log-verification-job.yaml
+│               │   ├── policy-validation.yaml
+│               │   └── compliance-check.yaml
+│               ├── monitoring/
+│               │   ├── audit-log-forwarder.yaml
+│               │   ├── log-aggregator.yaml
+│               │   ├── alert-rules.yaml
+│               │   └── dashboard.yaml
+│               ├── tools/
+│               │   ├── audit-log-analyzer.yaml
+│               │   ├── log-query-tool.yaml
+│               │   └── compliance-reporter.yaml
+│               └── README-exercise.md
+├── policies/
+│   └── audit-logging/
+│       ├── baseline-audit-policy.yaml
+│       ├── pci-dss-audit-requirements.yaml
+│       ├── hipaa-audit-requirements.yaml
+│       └── soc2-audit-requirements.yaml
+└── tools/
+    └── audit-tools/
+        ├── kube-audit-analyzer.yaml
+        ├── falco-audit-integration.yaml
+        └── audit-log-export.yaml
+
 markdown
 # CKS Lab 09 - Kubernetes Audit Logging
 

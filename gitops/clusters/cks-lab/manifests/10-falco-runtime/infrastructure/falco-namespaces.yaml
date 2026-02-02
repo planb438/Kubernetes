@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: falco-system
+  labels:
+    cks-lab: "10-falco-runtime"
+    runtime-security: enabled
+    purpose: "falco-infrastructure"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: falco-test
+  labels:
+    cks-lab: "10-falco-runtime"
+    runtime-security: enabled
+    purpose: "falco-testing"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: falco-monitoring
+  labels:
+    cks-lab: "10-falco-runtime"
+    runtime-security: enabled
+    purpose: "falco-monitoring"

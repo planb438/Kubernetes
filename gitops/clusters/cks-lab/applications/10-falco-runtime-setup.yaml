@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: 10-falco-runtime-setup
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/planb438/Kubernetes.git
+    targetRevision: HEAD
+    path: gitops/clusters/cks-lab/manifests/10-falco-runtime/infrastructure
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: falco-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        maxDuration: 3m

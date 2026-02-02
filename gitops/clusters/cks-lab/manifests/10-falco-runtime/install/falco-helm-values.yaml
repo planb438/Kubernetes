@@ -1,0 +1,116 @@
+# falco-helm-values.yaml
+# Custom Helm values for Falco installation
+
+# Global settings
+global:
+  registry: docker.io
+  repository: falcosecurity/falco
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Falco driver settings
+driver:
+  enabled: true
+  kind: ebpf
+  # Alternatives: module, ebpf, modern-ebpf
+  
+  # For kernel module
+  # kernelModule:
+  #   name: falco
+  #   hdDigest: ""
+  #   kernelVersion: ""
+
+  # For eBPF
+  ebpf:
+    enabled: true
+    probePath: "/root/.falco/falco-bpf.o"
+
+# Falco settings
+falco:
+  jsonOutput: true
+  jsonIncludeOutputProperty: true
+  logLevel: info
+  priority: warning
+  
+  # Rules files
+  rulesFile:
+    - /etc/falco/falco_rules.yaml
+    - /etc/falco/falco_rules.local.yaml
+    - /etc/falco/k8s_audit_rules.yaml
+    - /etc/falco/rules.d/
+  
+  # Enable Kubernetes audit events
+  k8sAuditEndpoint: "0.0.0.0:9765"
+  k8sAuditRules:
+    - /etc/falco/k8s_audit_rules.yaml
+  
+  # Webhook outputs
+  webhook:
+    enabled: true
+    address: 0.0.0.0
+    port: 2801
+    url: "http://falco-webhook.falco-system.svc.cluster.local:2801/"
+  
+  # Program output
+  programOutput:
+    enabled: true
+    keepAlive: false
+    program: "jq '{text: .output}' | curl -d @- -X POST https://hooks.slack.com/services/XXX"
+  
+  # File output
+  fileOutput:
+    enabled: true
+    keepAlive: false
+    filename: "/var/log/falco_events.log"
+  
+  # stdout output
+  stdoutOutput:
+    enabled: true
+
+# Falco exporter for Prometheus
+falco-exporter:
+  enabled: true
+  image:
+    repository: falcosecurity/falco-exporter
+    tag: latest
+  
+  service:
+    port: 9376
+    type: ClusterIP
+  
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# Resources
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "250m"
+  limits:
+    memory: "1Gi"
+    cpu: "500m"
+
+# DaemonSet configuration
+daemonset:
+  updateStrategy:
+    type: RollingUpdate
+  
+  # Node selection for Falco pods
+  nodeSelector: {}
+  
+  tolerations:
+    - key: node-role.kubernetes.io/master
+      effect: NoSchedule
+    - key: node-role.kubernetes.io/control-plane
+      effect: NoSchedule
+  
+  # For running on all nodes including masters
+  affinity: {}
+
+# Custom rules can be added here
+customRules: {}

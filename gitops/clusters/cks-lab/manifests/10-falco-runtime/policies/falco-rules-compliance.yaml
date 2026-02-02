@@ -1,0 +1,57 @@
+# falco-rules-compliance.yaml
+# Compliance-focused rules for various frameworks
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: falco-rules-compliance
+  namespace: falco-system
+data:
+  compliance_rules.yaml: |
+    # CIS Benchmark Compliance Rules
+    
+    - rule: CIS 5.2.1 - Ensure that the --anonymous-auth argument is set to false
+      desc: Detect anonymous authentication being enabled
+      condition: k8s_audit and ka.verb=create and ka.target.resource=pods and ka.req.pod.spec.containers[].args contains "--anonymous-auth=true"
+      output: Kubernetes API Server anonymous authentication enabled (user=%ka.user.name pod=%ka.target.name)
+      priority: ERROR
+      tags: [cis, k8s, api-server]
+    
+    - rule: CIS 5.2.5 - Ensure that the --authorization-mode argument is not set to AlwaysAllow
+      desc: Detect AlwaysAllow authorization mode
+      condition: k8s_audit and ka.verb=create and ka.target.resource=pods and ka.req.pod.spec.containers[].args contains "--authorization-mode=AlwaysAllow"
+      output: Kubernetes API Server using AlwaysAllow authorization mode (user=%ka.user.name pod=%ka.target.name)
+      priority: ERROR
+      tags: [cis, k8s, api-server]
+    
+    # NIST 800-53 Compliance Rules
+    
+    - rule: NIST SI-3 - Malicious Code Protection
+      desc: Detect execution of known malicious patterns
+      condition: spawned_process and (proc.cmdline icontains "/tmp/" or proc.cmdline icontains "/dev/shm/" or proc.cmdline matches "curl.*bash" or proc.cmdline matches "wget.*bash")
+      output: Possible malicious code execution detected (user=%user.name command=%proc.cmdline)
+      priority: CRITICAL
+      tags: [nist, si-3, malicious-code]
+    
+    - rule: NIST AU-2 - Audit Events
+      desc: Detect audit configuration changes
+      condition: k8s_audit and ka.verb in (update, patch) and ka.target.resource=configmaps and ka.target.name contains "audit"
+      output: Kubernetes audit configuration modified (user=%ka.user.name configmap=%ka.target.name)
+      priority: WARNING
+      tags: [nist, au-2, audit]
+    
+    # PCI-DSS Compliance Rules
+    
+    - rule: PCI-DSS 8.1.1 - Unique ID Assignment
+      desc: Detect shared service account usage
+      condition: k8s_audit and ka.verb=create and ka.target.resource=pods and ka.req.pod.spec.serviceAccountName="default"
+      output: Pod using default service account (user=%ka.user.name pod=%ka.target.name namespace=%ka.target.namespace)
+      priority: WARNING
+      tags: [pci-dss, authentication, service-account]
+    
+    - rule: PCI-DSS 10.2 - Audit Trail
+      desc: Detect disabled audit logging
+      condition: k8s_audit and ka.verb=create and ka.target.resource=pods and ka.req.pod.spec.containers[].args contains "--audit-log-path=" and not ka.req.pod.spec.containers[].args contains "--audit-log-path=/var/log"
+      output: Kubernetes API Server audit logging potentially disabled or misconfigured (user=%ka.user.name)
+      priority: CRITICAL
+      tags: [pci-dss, audit-trail]

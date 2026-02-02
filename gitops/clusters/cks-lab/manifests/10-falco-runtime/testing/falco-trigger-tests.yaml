@@ -1,0 +1,86 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: falco-trigger-tests
+  namespace: falco-test
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: falco-tester
+      containers:
+      - name: test-runner
+        image: bitnami/kubectl:latest
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          echo "=== Falco Trigger Test Suite ==="
+          echo ""
+          
+          # Wait for Falco to be ready
+          echo "Waiting for Falco pods to be ready..."
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=falco -n falco-system --timeout=120s
+          
+          echo ""
+          echo "Starting Falco alert trigger tests..."
+          echo ""
+          
+          # Test 1: Create pod with shell command
+          echo "Test 1: Creating pod with shell command..."
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: test-shell-pod
+            namespace: falco-test
+          spec:
+            containers:
+            - name: test
+              image: busybox
+              command: ["sh", "-c", "echo 'Test shell' && sleep 5"]
+            restartPolicy: Never
+          EOF
+          
+          sleep 10
+          
+          # Test 2: Create pod that writes to binary directory
+          echo ""
+          echo "Test 2: Creating pod that writes to /usr/bin..."
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: test-write-pod
+            namespace: falco-test
+          spec:
+            containers:
+            - name: test
+              image: alpine
+              command: ["sh", "-c", "touch /usr/bin/test-file 2>/dev/null || true; sleep 5"]
+            restartPolicy: Never
+          EOF
+          
+          sleep 10
+          
+          # Test 3: Check Falco logs for alerts
+          echo ""
+          echo "Test 3: Checking Falco logs for triggered alerts..."
+          echo ""
+          echo "Recent Falco alerts:"
+          kubectl logs -n falco-system -l app.kubernetes.io/name=falco --since=30s --tail=50 | grep -E "(WARNING|ERROR|CRITICAL)" || echo "No recent alerts found"
+          
+          echo ""
+          echo "=== Test Suite Complete ==="
+          echo ""
+          echo "Cleanup test pods..."
+          kubectl delete pod test-shell-pod test-write-pod -n falco-test --ignore-not-found=true
+          
+          echo ""
+          echo "View Falco alerts with:"
+          echo "kubectl logs -n falco-system -l app.kubernetes.io/name=falco --tail=100"
+          
+      restartPolicy: Never
+  backoffLimit: 0

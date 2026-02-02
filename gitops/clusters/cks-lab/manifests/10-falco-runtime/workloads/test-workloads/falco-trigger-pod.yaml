@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: falco-test-pod
+  namespace: falco-test
+  labels:
+    cks-lab: "10-falco-runtime"
+    test-type: falco-trigger
+spec:
+  serviceAccountName: falco-tester
+  containers:
+  - name: test-container
+    image: alpine:latest
+    command: ["/bin/sh", "-c"]
+    args:
+    - |
+      echo "Starting Falco test pod..."
+      echo "This pod will trigger various Falco alerts for testing"
+      echo ""
+      echo "Sleeping for 5 seconds before starting tests..."
+      sleep 5
+      
+      echo "Test 1: Executing shell command (should trigger shell alert)..."
+      /bin/sh -c "echo 'Test shell command'"
+      
+      echo "Test 2: Creating raw socket (should trigger network alert)..."
+      python3 -c "
+      import socket
+      try:
+          s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW)
+          print('Raw socket created')
+          s.close()
+      except:
+          print('Cannot create raw socket (likely not running as root)')
+      "
+      
+      echo "Test 3: Writing to /usr/bin (should trigger filesystem alert)..."
+      touch /tmp/test-file 2>/dev/null && echo "Created test file in /tmp"
+      
+      echo "Test 4: Network scanning attempt (should trigger network tool alert)..."
+      which nc >/dev/null 2>&1 && echo "netcat available" || echo "netcat not available"
+      
+      echo ""
+      echo "All tests completed. Check Falco logs for alerts."
+      echo "Sleeping to keep pod alive for inspection..."
+      sleep 3600
+    securityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+  restartPolicy: Never
