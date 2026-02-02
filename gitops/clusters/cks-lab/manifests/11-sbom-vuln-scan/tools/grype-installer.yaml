@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grype-scanner
+  namespace: sbom-system
+  labels:
+    app: grype-scanner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grype-scanner
+  template:
+    metadata:
+      labels:
+        app: grype-scanner
+    spec:
+      serviceAccountName: vuln-checker
+      containers:
+      - name: grype
+        image: anchore/grype:latest
+        command: ["sleep", "infinity"]
+        volumeMounts:
+        - name: scan-results
+          mountPath: /scan-results
+        - name: config
+          mountPath: /config
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: scan-results
+        emptyDir: {}
+      - name: config
+        configMap:
+          name: grype-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grype-config
+  namespace: sbom-system
+data:
+  grype.yaml: |
+    db:
+      auto-update: true
+      cache-dir: /tmp/grype-db
+    check-for-app-update: false
+    fail-on-severity: high
+    output: table
+    scope: Squashed
+    registry:
+      insecure-skip-tls-verify: false
+      insecure-use-http: false

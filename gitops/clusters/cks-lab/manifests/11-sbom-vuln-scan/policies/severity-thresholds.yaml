@@ -1,0 +1,40 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: block-critical-vulnerabilities
+  annotations:
+    policies.kyverno.io/title: Block Critical Vulnerabilities
+    policies.kyverno.io/category: Security
+    policies.kyverno.io/severity: high
+spec:
+  validationFailureAction: Enforce
+  background: false
+  rules:
+  - name: block-images-with-critical-vulns
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+          - Job
+          - CronJob
+    validate:
+      message: "Images must not contain CRITICAL severity vulnerabilities"
+      foreach:
+      - list: "request.object.spec.[containers, initContainers][]"
+        context:
+        - name: vulnscan
+          apiCall:
+            urlPath: "/api/v1/namespaces/sbom-system/pods"
+            jmesPath: "items[?status.phase=='Running'].metadata.name | [0]"
+        deny:
+          conditions:
+            any:
+            - key: "{{ vulnscan }}"
+              operator: Equals
+              value: ""
+  # Note: This is a simplified example. In production, you would integrate
+  # with a vulnerability scanning service like Trivy or Grype

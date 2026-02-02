@@ -1,0 +1,71 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: syft-installer
+  namespace: sbom-system
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: sbom-scanner
+      containers:
+      - name: installer
+        image: alpine:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "Installing SBOM and vulnerability scanning tools..."
+          echo ""
+          
+          # Install Syft
+          echo "Installing Syft..."
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | \
+            sh -s -- -b /tmp
+          mv /tmp/syft /usr/local/bin/
+          
+          # Install Grype
+          echo "Installing Grype..."
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | \
+            sh -s -- -b /tmp
+          mv /tmp/grype /usr/local/bin/
+          
+          # Install Trivy
+          echo "Installing Trivy..."
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | \
+            sh -s -- -b /tmp
+          mv /tmp/trivy /usr/local/bin/
+          
+          echo ""
+          echo "Tool versions:"
+          echo "Syft: $(syft version)"
+          echo "Grype: $(grype version)"
+          echo "Trivy: $(trivy --version)"
+          
+          echo ""
+          echo "Creating tool containers for scanning..."
+          
+          # Create Syft container image
+          cat <<EOF > /tmp/syft.Dockerfile
+          FROM alpine:latest
+          RUN apk add --no-cache curl
+          RUN curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | \
+              sh -s -- -b /usr/local/bin
+          ENTRYPOINT ["syft"]
+          EOF
+          
+          # Create Grype container image
+          cat <<EOF > /tmp/grype.Dockerfile
+          FROM alpine:latest
+          RUN apk add --no-cache curl
+          RUN curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | \
+              sh -s -- -b /usr/local/bin
+          ENTRYPOINT ["grype"]
+          EOF
+          
+          echo "Tools installed successfully"
+        securityContext:
+          privileged: true
+      restartPolicy: Never

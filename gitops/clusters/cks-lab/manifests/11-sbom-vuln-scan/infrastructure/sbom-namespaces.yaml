@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sbom-system
+  labels:
+    cks-lab: "11-sbom-vuln-scan"
+    sbom: enabled
+    purpose: "sbom-infrastructure"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sbom-test
+  labels:
+    cks-lab: "11-sbom-vuln-scan"
+    sbom: enabled
+    purpose: "sbom-testing"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sbom-monitoring
+  labels:
+    cks-lab: "11-sbom-vuln-scan"
+    sbom: enabled
+    purpose: "sbom-monitoring"

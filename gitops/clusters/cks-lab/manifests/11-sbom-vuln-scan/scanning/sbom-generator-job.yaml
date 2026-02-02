@@ -1,0 +1,67 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: sbom-generator
+  namespace: sbom-system
+spec:
+  schedule: "0 */6 * * *"  # Every 6 hours
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 86400  # 24 hours
+      template:
+        spec:
+          serviceAccountName: sbom-scanner
+          containers:
+          - name: syft
+            image: anchore/syft:latest
+            command: ["/bin/sh", "-c"]
+            args:
+            - |
+              echo "Starting SBOM generation for cluster images..."
+              
+              # Create output directory
+              mkdir -p /sbom-output
+              
+              # Generate SBOM for all images in the cluster
+              echo "Listing all container images in cluster..."
+              
+              # Get all pods and their images
+              kubectl get pods --all-namespaces -o json | \
+                jq -r '.items[] | .spec.containers[]?.image, .spec.initContainers[]?.image' | \
+                sort -u > /tmp/images.txt
+              
+              echo "Found $(wc -l < /tmp/images.txt) unique images"
+              
+              # Generate SBOM for each image
+              while IFS= read -r image; do
+                if [ -n "$image" ]; then
+                  echo "Generating SBOM for: $image"
+                  safe_name=$(echo "$image" | tr '/:' '_')
+                  syft "$image" -o spdx-json > "/sbom-output/${safe_name}.spdx.json"
+                  syft "$image" -o cyclonedx-json > "/sbom-output/${safe_name}.cyclonedx.json"
+                fi
+              done < /tmp/images.txt
+              
+              # Store SBOM in ConfigMap
+              echo "Creating SBOM ConfigMap..."
+              kubectl create configmap sbom-repository --from-file=/sbom-output -n sbom-system --dry-run=client -o yaml | \
+                kubectl apply -f -
+              
+              echo "SBOM generation complete"
+            volumeMounts:
+            - name: sbom-output
+              mountPath: /sbom-output
+            - name: kubeconfig
+              mountPath: /root/.kube
+              readOnly: true
+          volumes:
+          - name: sbom-output
+            emptyDir: {}
+          - name: kubeconfig
+            secret:
+              secretName: sbom-scanner-token
+              items:
+              - key: kubeconfig
+                path: config
+          restartPolicy: OnFailure

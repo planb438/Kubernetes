@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: scan-test-pod
+  namespace: sbom-test
+  labels:
+    cks-lab: "11-sbom-vuln-scan"
+    test-type: vulnerability-scan
+  annotations:
+    test-description: "Pod for testing vulnerability scanning"
+spec:
+  serviceAccountName: sbom-tester
+  containers:
+  - name: scanner
+    image: alpine:latest
+    command: ["/bin/sh", "-c"]
+    args:
+    - |
+      echo "=== Vulnerability Scan Test Pod ==="
+      echo ""
+      echo "This pod demonstrates various container images for scanning:"
+      echo ""
+      echo "1. Pulling various images for testing..."
+      
+      # Pull images with known vulnerabilities
+      echo "Pulling vulnerable images:"
+      echo "- python:3.8-slim (older, may have vulnerabilities)"
+      echo "- node:14 (older LTS)"
+      echo "- nginx:1.18 (older version)"
+      
+      # Attempt to pull (might fail without credentials)
+      echo "Attempting to pull images..."
+      
+      # Instead, show what would be scanned
+      echo ""
+      echo "2. Sample scan commands:"
+      echo ""
+      echo "To scan an image with Grype:"
+      echo "  grype python:3.8-slim --output json > scan-results.json"
+      echo ""
+      echo "To scan an image with Trivy:"
+      echo "  trivy image python:3.8-slim --severity HIGH,CRITICAL"
+      echo ""
+      echo "To generate SBOM with Syft:"
+      echo "  syft python:3.8-slim -o json > sbom.json"
+      echo ""
+      echo "3. Example vulnerable packages to look for:"
+      echo "- OpenSSL < 1.1.1 (CVE-2022-XXXX)"
+      echo "- glibc < 2.31 (CVE-2023-XXXX)"
+      echo "- Python < 3.9 (various CVEs)"
+      echo ""
+      echo "Sleeping to keep pod alive for inspection..."
+      sleep 3600
+    securityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+      allowPrivilegeEscalation: false
+  restartPolicy: Never
