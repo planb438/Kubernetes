@@ -1,0 +1,26 @@
+# Kyverno Policy: Require imagePullPolicy
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-image-pull-policy
+  annotations:
+    cks.exercise: "07-private-registry"
+spec:
+  validationFailureAction: enforce
+  background: true
+  rules:
+  - name: check-image-pull-policy
+    match:
+      resources:
+        kinds:
+        - Pod
+        namespaces:
+        - private-registry-lab
+    validate:
+      message: "All containers must have imagePullPolicy set"
+      pattern:
+        spec:
+          containers:
+          - imagePullPolicy: "?*"
+          =(initContainers):
+          - imagePullPolicy: "?*"

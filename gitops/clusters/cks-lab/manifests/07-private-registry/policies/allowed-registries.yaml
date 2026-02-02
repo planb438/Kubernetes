@@ -1,0 +1,50 @@
+# OPA/Gatekeeper Policy: Allow only approved registries
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: k8sallowedregistries
+  namespace: private-registry-lab
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sAllowedRegistries
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sallowedregistries
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          not startswith(container.image, allowed_registry)
+          msg := sprintf("Container image '%v' is from disallowed registry. Allowed: %v", [container.image, allowed_registries])
+        }
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.initContainers[_]
+          not startswith(container.image, allowed_registry)
+          msg := sprintf("Init container image '%v' is from disallowed registry. Allowed: %v", [container.image, allowed_registries])
+        }
+        
+        allowed_registries = {
+          "docker.io/",
+          "ghcr.io/",
+          "gcr.io/",
+          "k8s.gcr.io/",
+          "quay.io/",
+          "registry.k8s.io/"
+        }
+        
+        allowed_registry = allowed_registries[_]
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sAllowedRegistries
+metadata:
+  name: allowed-registries
+  namespace: private-registry-lab
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaces: ["private-registry-lab"]

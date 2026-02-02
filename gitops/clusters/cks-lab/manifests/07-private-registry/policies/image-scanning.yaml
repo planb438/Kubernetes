@@ -1,0 +1,28 @@
+# Trivy/Clair integration example
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: image-scan-cron
+  namespace: private-registry-lab
+spec:
+  schedule: "0 2 * * *"  # 2 AM daily
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+          - name: trivy-scanner
+            image: aquasec/trivy:latest
+            command: ["trivy"]
+            args:
+            - "image"
+            - "--format"
+            - "json"
+            - "--exit-code"
+            - "1"
+            - "--severity"
+            - "CRITICAL,HIGH"
+            - "your-private-repo/app:v1.2.3"
+            securityContext:
+              runAsNonRoot: true

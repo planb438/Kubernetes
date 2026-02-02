@@ -1,0 +1,70 @@
+# ANTI-PATTERN: What NOT to do
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: insecure-private-app
+  namespace: private-registry-lab
+  annotations:
+    cks.exercise: "07-private-registry"
+    cks.pattern: "anti-pattern"
+    cks.expected: "This deployment has multiple security issues"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: insecure-private-app
+  template:
+    metadata:
+      labels:
+        app: insecure-private-app
+    spec:
+      # ❌ ANTI-PATTERN: No ServiceAccount specified
+      # ❌ ANTI-PATTERN: No imagePullSecrets at pod level
+      # ❌ ANTI-PATTERN: Hardcoded pull secret in deployment
+      imagePullSecrets:
+      - name: hardcoded-regcred  # ❌ Secret name in deployment YAML
+      
+      containers:
+      - name: app
+        # ❌ ANTI-PATTERN: Using 'latest' tag
+        image: your-private-repo/app:latest
+        
+        # ❌ ANTI-PATTERN: ImagePullPolicy Never (won't get updates)
+        imagePullPolicy: Never
+        
+        # ❌ ANTI-PATTERN: Running as root
+        securityContext:
+          runAsUser: 0
+          privileged: true
+        
+        command: ["sleep", "3600"]
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-insecure-deployment
+  namespace: private-registry-lab
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: tester
+        image: bitnami/kubectl:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "=== Testing Insecure Deployment ==="
+          echo ""
+          echo "This deployment demonstrates multiple security anti-patterns:"
+          echo "1. ❌ Using 'latest' tag (no version pinning)"
+          echo "2. ❌ ImagePullPolicy: Never (won't get security updates)"
+          echo "3. ❌ Running as root (privileged: true)"
+          echo "4. ❌ Hardcoded secret reference in deployment"
+          echo "5. ❌ No dedicated ServiceAccount"
+          echo ""
+          echo "Expected issues when deploying..."
+          kubectl apply -f insecure-deployment.yaml 2>&1 || echo "Deployment failed as expected"
+          echo ""
+          echo "=== Lesson: Always use secure patterns ==="

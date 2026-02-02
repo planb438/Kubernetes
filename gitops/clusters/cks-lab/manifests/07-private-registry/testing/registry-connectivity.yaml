@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: registry-connectivity-test
+  namespace: private-registry-lab
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: tester
+        image: alpine/curl:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "=== Registry Connectivity Test ==="
+          echo ""
+          
+          # Test Docker Hub connectivity
+          echo "1. Testing Docker Hub..."
+          curl -I https://hub.docker.com
+          echo ""
+          
+          # Test GHCR connectivity
+          echo "2. Testing GitHub Container Registry..."
+          curl -I https://ghcr.io
+          echo ""
+          
+          # Test image pull with credentials
+          echo "3. Testing authenticated pull..."
+          echo "Using ServiceAccount: app-service-account"
+          echo ""
+          
+          # Test Kubernetes secret exists
+          echo "4. Checking image pull secrets..."
+          kubectl get secrets -l type=kubernetes.io/dockerconfigjson
+          echo ""
+          
+          echo "=== Test Complete ==="

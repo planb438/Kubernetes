@@ -1,0 +1,48 @@
+# Docker Registry Mirror/Cache (for air-gapped or rate-limited environments)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry-cache
+  namespace: private-registry-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: registry-cache
+  template:
+    metadata:
+      labels:
+        app: registry-cache
+    spec:
+      containers:
+      - name: registry
+        image: registry:2
+        ports:
+        - containerPort: 5000
+        env:
+        - name: REGISTRY_PROXY_REMOTEURL
+          value: https://registry-1.docker.io
+        - name: REGISTRY_PROXY_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: dockerhub-regcred
+              key: .dockerconfigjson
+        volumeMounts:
+        - name: cache
+          mountPath: /var/lib/registry
+      volumes:
+      - name: cache
+        persistentVolumeClaim:
+          claimName: registry-cache-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry-cache
+  namespace: private-registry-lab
+spec:
+  selector:
+    app: registry-cache
+  ports:
+  - port: 5000
+    targetPort: 5000

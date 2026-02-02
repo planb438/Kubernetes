@@ -1,0 +1,69 @@
+# Multi-registry deployment (common in enterprises)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multi-registry-app
+  namespace: private-registry-lab
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: multi-registry-app
+  template:
+    metadata:
+      labels:
+        app: multi-registry-app
+    spec:
+      # ServiceAccount with multiple pull secrets
+      serviceAccountName: multi-registry-sa
+      
+      initContainers:
+      - name: init-db
+        # Pull from Docker Hub
+        image: postgres:15-alpine
+        imagePullPolicy: IfNotPresent
+        command: ["echo", "Initializing database..."]
+      
+      containers:
+      - name: app
+        # Pull from GitHub Container Registry
+        image: ghcr.io/yourorg/app:v1.0.0
+        imagePullPolicy: Always  # Always pull for security updates
+        
+        ports:
+        - containerPort: 8080
+        
+        env:
+        - name: DB_IMAGE
+          value: "postgres:15-alpine"
+        - name: CACHE_IMAGE
+          value: "redis:7-alpine"
+        
+        volumeMounts:
+        - name: config
+          mountPath: /config
+          readOnly: true
+      
+      - name: cache
+        # Pull from Docker Hub (different image)
+        image: redis:7-alpine
+        imagePullPolicy: IfNotPresent
+        
+        ports:
+        - containerPort: 6379
+      
+      volumes:
+      - name: config
+        configMap:
+          name: app-config
+---
+# ServiceAccount with multiple imagePullSecrets
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: multi-registry-sa
+  namespace: private-registry-lab
+imagePullSecrets:
+- name: dockerhub-regcred
+- name: ghcr-regcred
+- name: ecr-regcred
