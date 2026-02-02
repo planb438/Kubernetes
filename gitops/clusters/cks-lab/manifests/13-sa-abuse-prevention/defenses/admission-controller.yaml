@@ -1,0 +1,124 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sa-admission-policies
+  namespace: sa-security-system
+data:
+  webhook.yaml: |
+    apiVersion: admissionregistration.k8s.io/v1
+    kind: ValidatingWebhookConfiguration
+    metadata:
+      name: sa-security-webhook
+      labels:
+        app: sa-security-admission
+    webhooks:
+    - name: sa-security.kubernetes.io
+      admissionReviewVersions: ["v1"]
+      clientConfig:
+        service:
+          name: sa-admission-webhook
+          namespace: sa-security-system
+          path: "/validate"
+          port: 443
+      rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+      failurePolicy: Fail
+      sideEffects: None
+      timeoutSeconds: 5
+      namespaceSelector:
+        matchLabels:
+          sa-security-enabled: "true"
+  
+  validation-logic.py: |
+    #!/usr/bin/env python3
+    """
+    Admission webhook for service account security validation
+    """
+    
+    from flask import Flask, request, jsonify
+    import json
+    import base64
+    import logging
+    
+    app = Flask(__name__)
+    logging.basicConfig(level=logging.INFO)
+    
+    @app.route('/health', methods=['GET'])
+    def health():
+        return jsonify({'status': 'healthy'}), 200
+    
+    @app.route('/validate', methods=['POST'])
+    def validate():
+        try:
+            admission_request = request.json
+            uid = admission_request['request']['uid']
+            object_metadata = admission_request['request']['object']['metadata']
+            spec = admission_request['request']['object']['spec']
+            
+            violations = []
+            warnings = []
+            
+            # Check 1: Default service account usage
+            service_account = spec.get('serviceAccountName', 'default')
+            if service_account == 'default':
+                violations.append("Pods cannot use 'default' service account")
+            
+            # Check 2: Token mounting
+            automount = spec.get('automountServiceAccountToken')
+            if automount is None or automount == True:
+                violations.append("Pods must explicitly disable automountServiceAccountToken")
+            
+            # Check 3: Security context
+            if 'securityContext' not in spec:
+                warnings.append("Consider adding pod security context")
+            else:
+                if not spec['securityContext'].get('runAsNonRoot'):
+                    warnings.append("Consider setting runAsNonRoot: true")
+            
+            # Prepare response
+            if violations:
+                response = {
+                    "apiVersion": "admission.k8s.io/v1",
+                    "kind": "AdmissionReview",
+                    "response": {
+                        "uid": uid,
+                        "allowed": False,
+                        "status": {
+                            "code": 403,
+                            "message": "; ".join(violations)
+                        }
+                    }
+                }
+            else:
+                response = {
+                    "apiVersion": "admission.k8s.io/v1",
+                    "kind": "AdmissionReview",
+                    "response": {
+                        "uid": uid,
+                        "allowed": True,
+                        "warnings": warnings if warnings else None
+                    }
+                }
+            
+            return jsonify(response)
+            
+        except Exception as e:
+            logging.error(f"Validation error: {str(e)}")
+            return jsonify({
+                "apiVersion": "admission.k8s.io/v1",
+                "kind": "AdmissionReview",
+                "response": {
+                    "uid": uid if 'uid' in locals() else "",
+                    "allowed": False,
+                    "status": {
+                        "code": 500,
+                        "message": f"Internal server error: {str(e)}"
+                    }
+                }
+            }), 500
+    
+    if __name__ == '__main__':
+        app.run(host='0.0.0.0', port=443, ssl_context=('tls.crt', 'tls.key'))

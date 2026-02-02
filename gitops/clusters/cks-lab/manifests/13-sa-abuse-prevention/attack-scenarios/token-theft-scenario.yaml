@@ -1,0 +1,87 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: token-theft-demo
+  namespace: sa-security-test
+  labels:
+    cks-lab: "13-sa-abuse-prevention"
+    scenario: "token-theft"
+    purpose: "educational-demo"
+  annotations:
+    description: "Demonstrates how service account tokens can be stolen and abused"
+    warning: "This is for educational purposes only"
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: default
+      containers:
+      - name: attacker
+        image: alpine:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "=== Service Account Token Theft Demo ==="
+          echo ""
+          echo "Scenario: Attacker gains access to a pod with mounted service account token"
+          echo ""
+          
+          # Check if token is mounted
+          echo "1. Checking for mounted service account token..."
+          if [ -f "/var/run/secrets/kubernetes.io/serviceaccount/token" ]; then
+            echo "✓ Token found at: /var/run/secrets/kubernetes.io/serviceaccount/token"
+            TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+            echo "   Token preview: ${TOKEN:0:50}..."
+          else
+            echo "✗ No token mounted"
+            exit 1
+          fi
+          
+          # Extract namespace
+          echo ""
+          echo "2. Extracting namespace..."
+          NAMESPACE=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
+          echo "   Namespace: $NAMESPACE"
+          
+          # Extract CA cert
+          echo ""
+          echo "3. Extracting CA certificate..."
+          if [ -f "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt" ]; then
+            echo "✓ CA certificate found"
+          fi
+          
+          # Demonstrate token usage
+          echo ""
+          echo "4. Demonstrating token usage..."
+          echo ""
+          echo "   With this token, an attacker can:"
+          echo "   - Access Kubernetes API at: https://kubernetes.default.svc"
+          echo "   - Impersonate the service account"
+          echo "   - Perform actions based on service account permissions"
+          echo ""
+          
+          # Show what permissions this SA has
+          echo "5. Checking service account permissions..."
+          echo ""
+          echo "   Attempting to list pods (if permitted):"
+          curl -s -k -H "Authorization: Bearer $TOKEN" \
+            https://kubernetes.default.svc/api/v1/pods \
+            | jq '.items[] | .metadata.name' | head -5 || echo "   Access denied or limited"
+          
+          echo ""
+          echo "=== Mitigation Strategies ==="
+          echo ""
+          echo "To prevent token theft:"
+          echo "1. Set automountServiceAccountToken: false"
+          echo "2. Use dedicated service accounts with minimal permissions"
+          echo "3. Implement network policies to restrict pod egress"
+          echo "4. Use projected tokens with expiration"
+          echo "5. Monitor for unusual token usage patterns"
+          echo ""
+          echo "Demo complete."
+          
+        # This container would normally have security context restrictions
+        # but we're demonstrating the attack
+        securityContext:
+          runAsUser: 0
+      restartPolicy: Never

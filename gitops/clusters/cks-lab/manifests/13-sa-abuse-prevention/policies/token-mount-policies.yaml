@@ -1,0 +1,46 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-service-account-token-mount
+  annotations:
+    policies.kyverno.io/title: Restrict Service Account Token Mount
+    policies.kyverno.io/category: Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/subject: ServiceAccount
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+  - name: require-automount-false
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+    validate:
+      message: "Pods must explicitly disable automountServiceAccountToken or set it to false"
+      pattern:
+        spec:
+          automountServiceAccountToken: false
+    exclude:
+      any:
+      - resources:
+          namespaces:
+          - kube-system
+          - default
+  - name: block-default-sa
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+    validate:
+      message: "Pods cannot use 'default' service account"
+      pattern:
+        spec:
+          serviceAccountName: "!default"
+    exclude:
+      any:
+      - resources:
+          namespaces:
+          - kube-system

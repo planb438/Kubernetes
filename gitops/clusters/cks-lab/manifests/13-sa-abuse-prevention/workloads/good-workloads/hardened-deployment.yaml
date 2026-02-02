@@ -1,0 +1,125 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secure-app
+  namespace: sa-security-test
+  labels:
+    app: secure-app
+    cks-lab: "13-sa-abuse-prevention"
+    security-tier: "hardened"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: secure-app
+  template:
+    metadata:
+      labels:
+        app: secure-app
+        security-tier: "hardened"
+    spec:
+      # GOOD: Dedicated service account
+      serviceAccountName: secure-app-sa
+      
+      # GOOD: Explicitly disable token mounting
+      automountServiceAccountToken: false
+      
+      # GOOD: Security context for pod
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      
+      containers:
+      - name: app
+        image: nginx:1.25-alpine
+        ports:
+        - containerPort: 80
+          name: http
+        
+        # GOOD: Security context for container
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
+          privileged: false
+        
+        # GOOD: Readiness and liveness probes
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+      
+      # GOOD: Affinity rules
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - secure-app
+              topologyKey: kubernetes.io/hostname
+---
+# Service Account for the deployment
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: secure-app-sa
+  namespace: sa-security-test
+  labels:
+    app: secure-app
+# GOOD: Disable token mounting at SA level
+automountServiceAccountToken: false
+---
+# Minimal RBAC permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: secure-app-role
+  namespace: sa-security-test
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: secure-app-binding
+  namespace: sa-security-test
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: secure-app-role
+subjects:
+- kind: ServiceAccount
+  name: secure-app-sa
+  namespace: sa-security-test

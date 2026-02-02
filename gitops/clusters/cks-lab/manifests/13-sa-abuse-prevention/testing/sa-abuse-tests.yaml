@@ -1,0 +1,112 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sa-abuse-test-suite
+  namespace: sa-security-test
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      serviceAccountName: sa-security-tester
+      containers:
+      - name: tester
+        image: bitnami/kubectl:latest
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          echo "=== Service Account Abuse Prevention Test Suite ==="
+          echo ""
+          
+          # Test 1: Default SA token mounting
+          echo "Test 1: Checking default service account token mounting..."
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: test-default-sa
+            namespace: sa-security-test
+          spec:
+            containers:
+            - name: test
+              image: alpine
+              command: ["sleep", "5"]
+          EOF
+          
+          sleep 3
+          
+          echo "Checking if token is mounted..."
+          kubectl exec -n sa-security-test test-default-sa -- ls /var/run/secrets/kubernetes.io/serviceaccount/ 2>/dev/null && \
+            echo "WARNING: Token is mounted to default SA pod" || \
+            echo "SUCCESS: Token not mounted (policy enforced)"
+          
+          kubectl delete pod test-default-sa -n sa-security-test --ignore-not-found
+          
+          # Test 2: Dedicated SA with restricted permissions
+          echo ""
+          echo "Test 2: Testing dedicated service account..."
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: test-restricted-sa
+            namespace: sa-security-test
+          automountServiceAccountToken: false
+          EOF
+          
+          cat <<EOF | kubectl apply -f -
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: Role
+          metadata:
+            name: test-readonly
+            namespace: sa-security-test
+          rules:
+          - apiGroups: [""]
+            resources: ["pods"]
+            verbs: ["get", "list"]
+          EOF
+          
+          cat <<EOF | kubectl apply -f -
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: RoleBinding
+          metadata:
+            name: test-binding
+            namespace: sa-security-test
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: test-readonly
+          subjects:
+          - kind: ServiceAccount
+            name: test-restricted-sa
+            namespace: sa-security-test
+          EOF
+          
+          echo "Testing restricted SA permissions..."
+          
+          # Test 3: Overprivileged SA detection
+          echo ""
+          echo "Test 3: Checking for overprivileged service accounts..."
+          echo "Service accounts with cluster-admin permissions:"
+          kubectl get clusterrolebindings -o json | \
+            jq -r '.items[] | select(.subjects[]?.kind=="ServiceAccount") | .metadata.name' | \
+            grep -i admin || echo "No cluster-admin SAs found"
+          
+          echo ""
+          echo "=== Test Suite Complete ==="
+          echo ""
+          echo "Summary:"
+          echo "1. Default SA token mounting should be disabled"
+          echo "2. Dedicated SAs should have minimal permissions"
+          echo "3. No service accounts should have cluster-admin"
+          echo ""
+          echo "Cleanup..."
+          kubectl delete sa,role,rolebinding -n sa-security-test -l test=true --ignore-not-found
+          
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+      restartPolicy: Never
+  backoffLimit: 0
