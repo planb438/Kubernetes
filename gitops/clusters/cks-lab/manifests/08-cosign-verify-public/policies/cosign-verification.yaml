@@ -1,0 +1,48 @@
+# Kyverno Policy: Verify Cosign signatures
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-image-signatures
+  annotations:
+    cks.exercise: "08-cosign-verify-public"
+    cks.policy: "cosign-verification"
+    policies.kyverno.io/title: Verify Image Signatures
+    policies.kyverno.io/category: Software Supply Chain
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      Verifies Cosign signatures on container images to ensure
+      images are from trusted sources and haven't been tampered with.
+spec:
+  validationFailureAction: enforce
+  background: false
+  rules:
+  - name: verify-cosign-signatures
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - supply-chain-lab
+    verifyImages:
+    - image: "*"  # Apply to ALL images
+      key: |
+        # Public key from Sigstore's Fulcio
+        -----BEGIN PUBLIC KEY-----
+        MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE2G2Y+2tabdTV5BcGiBIx0a9fIFwr
+        ... (truncated for brevity) ...
+        -----END PUBLIC KEY-----
+      # OR use keyless verification with Fulcio
+      # keyless:
+      #   issuer: https://token.actions.githubusercontent.com
+      #   subject: "https://github.com/sigstore/cosign/.github/workflows/release.yaml@refs/heads/main"
+      mutateDigest: true
+      required: true
+      attestations:
+      - predicateType: https://slsa.dev/provenance/v0.2
+        conditions:
+        - all:
+          - key: "{{ predicate.buildDefinition.buildType }}"
+            operator: Equals
+            value: "https://github.com/slackhq/slsa-build-provenance?format=json"

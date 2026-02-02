@@ -1,0 +1,63 @@
+# Cosign as a Kubernetes admission controller (alternative to Kyverno)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cosign-webhook
+  namespace: supply-chain-lab
+  annotations:
+    cks.exercise: "08-cosign-verify-public"
+    cks.component: "cosign-webhook"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cosign-webhook
+  template:
+    metadata:
+      labels:
+        app: cosign-webhook
+    spec:
+      serviceAccountName: cosign-webhook-sa
+      containers:
+      - name: webhook
+        image: ghcr.io/sigstore/cosign:v2.2.3
+        command: ["cosign"]
+        args:
+        - "webhook"
+        - "--kubeconfig=/var/run/secrets/kubernetes.io/serviceaccount/kubeconfig"
+        - "--namespace=supply-chain-lab"
+        env:
+        - name: COSIGN_EXPERIMENTAL
+          value: "1"
+        volumeMounts:
+        - name: cosign-keys
+          mountPath: /keys
+          readOnly: true
+      volumes:
+      - name: cosign-keys
+        secret:
+          secretName: cosign-public-keys
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: cosign-verification-webhook
+  annotations:
+    cks.exercise: "08-cosign-verify-public"
+webhooks:
+- name: cosign.sigstore.dev
+  clientConfig:
+    service:
+      name: cosign-webhook
+      namespace: supply-chain-lab
+      path: /validate
+      port: 8443
+    caBundle: <CA_BUNDLE>
+  rules:
+  - operations: ["CREATE", "UPDATE"]
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["pods"]
+  failurePolicy: Fail
+  sideEffects: None
+  admissionReviewVersions: ["v1"]

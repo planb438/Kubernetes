@@ -1,0 +1,33 @@
+# Policy: Only allow images signed by specific identities
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: allow-only-trusted-signers
+  annotations:
+    cks.exercise: "08-cosign-verify-public"
+spec:
+  validationFailureAction: enforce
+  rules:
+  - name: verify-trusted-signers
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - supply-chain-lab
+    verifyImages:
+    - image: "ghcr.io/*"
+      keyless:
+        issuer: "https://token.actions.githubusercontent.com"
+        subject: "https://github.com/myorg/*"  # Only our org
+    - image: "docker.io/library/*"
+      key: |
+        # Docker Official Images public key
+        -----BEGIN PUBLIC KEY-----
+        MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEC0F...truncated...
+        -----END PUBLIC KEY-----
+    - image: "k8s.gcr.io/*"
+      keyless:
+        issuer: "https://accounts.google.com"
+        subject: "k8s-releng@kubernetes.io"

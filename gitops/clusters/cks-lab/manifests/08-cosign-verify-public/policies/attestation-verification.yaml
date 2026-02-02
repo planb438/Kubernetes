@@ -1,0 +1,35 @@
+# Policy: Verify SLSA attestations
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-slsa-attestations
+spec:
+  validationFailureAction: audit  # Start with audit, then enforce
+  rules:
+  - name: check-slsa-provenance
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+    verifyImages:
+    - image: "*"
+      attestations:
+      - predicateType: "https://slsa.dev/provenance/v0.2"
+        conditions:
+        - all:
+          - key: "{{ predicate.buildDefinition.internalParameters.source.git.commit }}"
+            operator: NotEquals
+            value: ""  # Must have commit hash
+          - key: "{{ predicate.buildDefinition.internalParameters.source.git.repository }}"
+            operator: Equals
+            value: "https://github.com/myorg/"  # Must be from our repo
+          - key: "{{ predicate.buildDefinition.buildType }}"
+            operator: Equals
+            value: "https://github.com/slackhq/slsa-build-provenance?format=json"
+      - predicateType: "https://cyclonedx.org/bom"
+        conditions:
+        - all:
+          - key: "{{ predicate.metadata.timestamp }}"
+            operator: NotEquals
+            value: ""

@@ -1,0 +1,50 @@
+# Attempt to deploy tampered image (WILL BE REJECTED)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tampered-app
+  namespace: supply-chain-lab
+  annotations:
+    cks.exercise: "08-cosign-verify-public"
+    cks.example: "tampered-workload"
+    cks.expected: "REJECTED"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tampered-app
+  template:
+    metadata:
+      labels:
+        app: tampered-app
+    spec:
+      containers:
+      - name: app
+        # This references a valid image but with wrong digest
+        # (simulating a tampered/man-in-the-middle attack)
+        image: ghcr.io/sigstore/cosign:v2.2.3@sha256:deadbeef...
+        command: ["sleep", "3600"]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tampering-lesson
+  namespace: supply-chain-lab
+data:
+  security-lesson.md: |
+    # Supply Chain Attack Prevention
+    
+    ## Scenario:
+    An attacker modifies an image in transit or in the registry.
+    
+    ## How Cosign prevents this:
+    1. **Digital Signature**: Image is signed with private key
+    2. **Hash Verification**: Digest must match signed digest
+    3. **TUF Integration**: The Update Framework for key management
+    4. **Transparency Logs**: All signatures logged in Rekor
+    
+    ## Attack prevented:
+    - Image tampering
+    - Man-in-the-middle attacks
+    - Registry compromise
+    - Fake/counterfeit images

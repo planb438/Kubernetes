@@ -1,0 +1,31 @@
+# Policy: Require SBOM (Software Bill of Materials)
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-sbom
+spec:
+  validationFailureAction: enforce
+  rules:
+  - name: check-sbom-attestation
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - production
+    verifyImages:
+    - image: "*"
+      attestations:
+      - predicateType: "https://cyclonedx.org/bom"
+        conditions:
+        - all:
+          - key: "{{ predicate.components }}"
+            operator: AnyIn
+            value: "*"  # Must have at least one component
+      - predicateType: "https://spdx.org/Document"
+        conditions:
+        - all:
+          - key: "{{ predicate.creationInfo.creators }}"
+            operator: AnyIn
+            value: "Organization: myorg"

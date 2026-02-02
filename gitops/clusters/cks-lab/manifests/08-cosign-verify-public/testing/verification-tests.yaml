@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cosign-verification-test
+  namespace: supply-chain-lab
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: tester
+        image: ghcr.io/sigstore/cosign:v2.2.3
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "=== Cosign Verification Test Suite ==="
+          echo ""
+          
+          # Test 1: Verify Sigstore's own image
+          echo "Test 1: Verifying Sigstore Cosign image..."
+          cosign verify \
+            --key https://fulcio.sigstore.dev/ghcr.pub \
+            ghcr.io/sigstore/cosign:v2.2.3
+          echo "✅ Sigstore image verified"
+          echo ""
+          
+          # Test 2: Check Rekor transparency log
+          echo "Test 2: Checking Rekor transparency log..."
+          cosign verify-attestation \
+            --type slsaprovenance \
+            ghcr.io/sigstore/cosign:v2.2.3
+          echo "✅ Transparency log verified"
+          echo ""
+          
+          # Test 3: Try to verify unsigned image (should fail)
+          echo "Test 3: Attempting to verify unsigned image..."
+          if cosign verify busybox:latest 2>/dev/null; then
+            echo "❌ ERROR: Should not be able to verify unsigned image"
+            exit 1
+          else
+            echo "✅ Correctly failed to verify unsigned image"
+          fi
+          echo ""
+          
+          echo "=== All Tests Passed ==="

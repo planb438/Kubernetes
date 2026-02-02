@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cks-08-cosign-verification
+  namespace: argocd
+  annotations:
+    cks.exercise: "08-cosign-verify-public"
+    cks.objective: "Implement Supply Chain Security with Cosign & Sigstore"
+    cks.difficulty: "advanced"
+    cks.time: "120 minutes"
+    cks.importance: "CRITICAL for supply chain security"
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    category: security
+    component: cks-lab
+    security-control: "supply-chain"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/planb438/Kubernetes.git
+    targetRevision: main
+    path: gitops/clusters/cks-lab/manifests/08-cosign-verify-public
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: supply-chain-lab
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: false
+    syncOptions:
+    - CreateNamespace=true
+    - ApplyOutOfSyncOnly=true

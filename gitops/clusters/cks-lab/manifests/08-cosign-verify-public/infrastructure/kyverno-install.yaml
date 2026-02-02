@@ -1,0 +1,48 @@
+# Kyverno with Cosign verification support
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kyverno-cosign
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://kyverno.github.io/kyverno/
+    chart: kyverno
+    targetRevision: 3.0.0
+    helm:
+      parameters:
+      - name: installCRDs
+        value: "true"
+      - name: replicaCount
+        value: "1"
+      - name: config.existingConfig
+        value: "kyverno-cosign-config"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kyverno
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kyverno-cosign-config
+  namespace: kyverno
+data:
+  config.yaml: |
+    # Kyverno configuration for Cosign verification
+    resourceFilters:
+      - "[Event,*,*]"
+      - "[*,kube-system,*]"
+      - "[*,kube-public,*]"
+      - "[*,kube-node-lease,*]"
+      - "[Node,*,*]"
+      - "[APIService,*,*]"
+      - "[TokenReview,*,*]"
+      - "[SubjectAccessReview,*,*]"
+      - "[*,kyverno,*]"
+      - "[Binding,*,*]"
+      - "[ReplicaSet,*,*]"
+    
+    # Cosign configuration
+    imageVerifyCacheDir: /tmp/kyverno/cache
+    imageSignatureRepository: ghcr.io

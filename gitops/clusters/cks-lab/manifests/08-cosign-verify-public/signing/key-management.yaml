@@ -1,0 +1,28 @@
+# Store public keys as Kubernetes Secrets
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cosign-public-keys
+  namespace: supply-chain-lab
+  annotations:
+    cks.exercise: "08-cosign-verify-public"
+type: Opaque
+stringData:
+  # Key 1: Organization public key
+  org.pub: |
+    -----BEGIN PUBLIC KEY-----
+    MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE2G2Y+2tabdTV5BcGiBIx0a9fIFwr
+    ... (example public key) ...
+    -----END PUBLIC KEY-----
+  
+  # Key 2: Docker Official Images
+  docker-official.pub: |
+    -----BEGIN PUBLIC KEY-----
+    MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEC0F...truncated...
+    -----END PUBLIC KEY-----
+  
+  # Key 3: Kubernetes Official
+  k8s-official.pub: |
+    -----BEGIN PUBLIC KEY-----
+    MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAET...truncated...
+    -----END PUBLIC KEY-----

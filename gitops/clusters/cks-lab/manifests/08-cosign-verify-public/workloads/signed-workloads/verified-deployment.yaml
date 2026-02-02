@@ -1,0 +1,73 @@
+# Deployment with signed images (WILL BE ALLOWED)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verified-app
+  namespace: supply-chain-lab
+  annotations:
+    cks.exercise: "08-cosign-verify-public"
+    cks.example: "signed-workload"
+    cks.expected: "ALLOWED"
+    cosign.sigstore.dev/image: ghcr.io/sigstore/cosign@sha256:abc123...
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: verified-app
+  template:
+    metadata:
+      labels:
+        app: verified-app
+      annotations:
+        # Kyverno will verify these images
+        cosign.sigstore.dev/attestations: |
+          [{
+            "predicateType": "https://slsa.dev/provenance/v0.2",
+            "digest": "sha256:abc123..."
+          }]
+    spec:
+      serviceAccountName: default
+      containers:
+      - name: app
+        # This image is signed by Sigstore (publicly verifiable)
+        image: ghcr.io/sigstore/cosign:v2.2.3
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsNonRoot: true
+          readOnlyRootFilesystem: true
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: signed-workload-info
+  namespace: supply-chain-lab
+data:
+  verification.md: |
+    # Signed Workload Verification
+    
+    ## Why this workload is allowed:
+    1. **Image is signed**: ghcr.io/sigstore/cosign:v2.2.3 is signed by Sigstore
+    2. **Public key verification**: Uses Sigstore's Fulcio root CA
+    3. **Transparency log**: Signature recorded in Rekor
+    
+    ## Verification steps:
+    ```bash
+    # Verify signature
+    cosign verify \
+      --key https://fulcio.sigstore.dev/ghcr.pub \
+      ghcr.io/sigstore/cosign:v2.2.3
+    
+    # Check Rekor transparency log
+    cosign verify-attestation \
+      --type slsaprovenance \
+      ghcr.io/sigstore/cosign:v2.2.3
+    ```

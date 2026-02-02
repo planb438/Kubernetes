@@ -1,0 +1,55 @@
+# Deployment with unsigned image (WILL BE REJECTED)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unsigned-app
+  namespace: supply-chain-lab
+  annotations:
+    cks.exercise: "08-cosign-verify-public"
+    cks.example: "unsigned-workload"
+    cks.expected: "REJECTED"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: unsigned-app
+  template:
+    metadata:
+      labels:
+        app: unsigned-app
+    spec:
+      containers:
+      - name: app
+        # This image is NOT signed (will be rejected by Kyverno)
+        image: busybox:latest
+        command: ["sleep", "3600"]
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-unsigned-rejection
+  namespace: supply-chain-lab
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: tester
+        image: bitnami/kubectl:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "=== Testing Unsigned Image Rejection ==="
+          echo ""
+          echo "Attempting to deploy unsigned workload..."
+          kubectl apply -f unsigned-deployment.yaml 2>&1 | tee /tmp/deploy.log
+          echo ""
+          
+          if grep -q "image verification failed" /tmp/deploy.log; then
+            echo "✅ TEST PASSED: Kyverno correctly rejected unsigned image"
+            exit 0
+          else
+            echo "❌ TEST FAILED: Unsigned image was not rejected"
+            exit 1
+          fi

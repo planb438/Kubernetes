@@ -1,0 +1,80 @@
+# Job to sign images as part of CI/CD pipeline
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sign-container-image
+  namespace: supply-chain-lab
+  annotations:
+    cks.exercise: "08-cosign-verify-public"
+    cks.task: "image-signing"
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: cosign-signer-sa
+      restartPolicy: Never
+      initContainers:
+      - name: fetch-keys
+        image: alpine/git:latest
+        command: ["sh", "-c"]
+        args:
+        - |
+          echo "Fetching signing keys from secure storage..."
+          # In production, fetch from HashiCorp Vault, AWS KMS, etc.
+          echo "Private key retrieved"
+        volumeMounts:
+        - name: cosign-keys
+          mountPath: /keys
+      containers:
+      - name: signer
+        image: ghcr.io/sigstore/cosign:v2.2.3
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "=== Signing Container Image ==="
+          echo ""
+          echo "Image: ghcr.io/myorg/app:v1.0.0"
+          echo ""
+          
+          # Sign the image
+          cosign sign \
+            --key /keys/cosign.key \
+            ghcr.io/myorg/app:v1.0.0
+          
+          # Generate SBOM
+          cosign attest \
+            --predicate /sbom.json \
+            --key /keys/cosign.key \
+            ghcr.io/myorg/app:v1.0.0
+          
+          # Generate SLSA provenance
+          cosign attest \
+            --predicate /provenance.json \
+            --type slsaprovenance \
+            --key /keys/cosign.key \
+            ghcr.io/myorg/app:v1.0.0
+          
+          echo ""
+          echo "=== Image Signed Successfully ==="
+        volumeMounts:
+        - name: cosign-keys
+          mountPath: /keys
+          readOnly: true
+        - name: sbom
+          mountPath: /sbom.json
+          subPath: sbom.json
+          readOnly: true
+        - name: provenance
+          mountPath: /provenance.json
+          subPath: provenance.json
+          readOnly: true
+      volumes:
+      - name: cosign-keys
+        secret:
+          secretName: cosign-signing-keys
+      - name: sbom
+        configMap:
+          name: app-sbom
+      - name: provenance
+        configMap:
+          name: build-provenance
