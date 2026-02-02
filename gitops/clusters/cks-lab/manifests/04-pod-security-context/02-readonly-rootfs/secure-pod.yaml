@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: readonly-fs-pod
+  namespace: pod-security-lab
+  annotations:
+    cks.exercise: "04-pod-security-context"
+    cks.section: "02-readonly-rootfs"
+spec:
+  containers:
+  - name: app
+    image: busybox:latest
+    command: ["sh", "-c", "echo 'Test data' > /tmp/test.txt && ls -la /tmp/"]
+    securityContext:
+      readOnlyRootFilesystem: true
+      runAsUser: 1000
+    volumeMounts:
+    - name: tmp-volume
+      mountPath: /tmp
+      readOnly: false  # Writeable volume for temp files
+  volumes:
+  - name: tmp-volume
+    emptyDir: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: readonly-fs-guide
+  namespace: pod-security-lab
+data:
+  strategy.md: |
+    # ReadOnly Root Filesystem Strategy
+    
+    ## Problem: 
+    Containers write to root filesystem by default
+    
+    ## Solution:
+    1. Set readOnlyRootFilesystem: true
+    2. Mount writeable volumes for:
+       - /tmp
+       - /var/log
+       - /var/run
+       - Application data directories
+    
+    ## Volume Types:
+    - emptyDir: Temporary data
+    - configMap: Configuration files  
+    - secret: Sensitive data
+    - persistentVolumeClaim: Persistent data

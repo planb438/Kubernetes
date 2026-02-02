@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: good-non-root-pod
+  namespace: pod-security-lab
+  annotations:
+    cks.exercise: "04-pod-security-context"
+    cks.section: "01-run-as-non-root"
+    cks.example: "good"
+    security.kubernetes.io/psa: "baseline"
+spec:
+  securityContext:
+    runAsNonRoot: true  # Kubernetes validates this at admission
+    runAsUser: 1000
+    runAsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: secure-app
+    image: nginxinc/nginx-unprivileged:alpine  # SPECIALLY BUILT non-root image
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      readOnlyRootFilesystem: true
+      runAsUser: 1000  # Explicit user (matches Dockerfile USER directive)
+    ports:
+    - containerPort: 8080
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "10m"
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: non-root-documentation
+  namespace: pod-security-lab
+data:
+  why-non-root.md: |
+    # Why Run as Non-Root?
+    
+    ## Risks of Running as Root:
+    1. **Container Escape**: If container is compromised, attacker has root privileges
+    2. **Host Access**: Root in container can access host resources
+    3. **Privilege Escalation**: Root can modify container runtime
+    
+    ## Best Practices:
+    1. Use non-root base images (nginx-unprivileged, node:alpine, etc.)
+    2. Set USER in Dockerfile
+    3. Use runAsNonRoot: true (K8s validates)
+    4. Set explicit runAsUser (not 0)
+    
+    ## Common User IDs:
+    - nginx: 101
+    - node: 1000  
+    - redis: 999
+    - postgres: 999

@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pod-security-standards
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    component: security-policies
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/planb438/Kubernetes.git
+    targetRevision: main
+    path: gitops/policies/pod-security-standards
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system  # Cluster-wide policies

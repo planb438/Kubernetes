@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cks-04-pod-security-context
+  namespace: argocd
+  annotations:
+    cks.exercise: "04-pod-security-context"
+    cks.objective: "Master Pod Security Contexts and Security Standards"
+    cks.difficulty: "intermediate"
+    cks.time: "90 minutes"
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    category: security
+    component: cks-lab
+    standard: "PSA"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/planb438/Kubernetes.git
+    targetRevision: main
+    path: gitops/clusters/cks-lab/manifests/04-pod-security-context
+    directory:
+      recurse: true
+      jsonnet: {}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pod-security-lab
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: false
+    syncOptions:
+    - CreateNamespace=true
+    - ApplyOutOfSyncOnly=true

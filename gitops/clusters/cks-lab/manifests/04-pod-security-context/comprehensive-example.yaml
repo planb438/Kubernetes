@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secure-nginx-deployment
+  namespace: pod-security-lab
+  labels:
+    app: secure-nginx
+    security-tier: "restricted"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: secure-nginx
+  template:
+    metadata:
+      labels:
+        app: secure-nginx
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/nginx: runtime/default
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101  # nginx user ID
+        runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+        fsGroup: 101
+        fsGroupChangePolicy: "OnRootMismatch"
+      containers:
+      - name: nginx
+        image: nginxinc/nginx-unprivileged:1.25-alpine
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+            add: ["NET_BIND_SERVICE"]  # Needed for port 80
+          privileged: false
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: nginx-conf
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+          readOnly: false
+        - name: cache
+          mountPath: /var/cache/nginx
+          readOnly: false
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      volumes:
+      - name: nginx-conf
+        configMap:
+          name: nginx-config
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: pod-security-lab
+data:
+  nginx.conf: |
+    user  nginx;
+    worker_processes  auto;
+    
+    events {
+      worker_connections  1024;
+    }
+    
+    http {
+      include       /etc/nginx/mime.types;
+      default_type  application/octet-stream;
+      
+      sendfile        on;
+      keepalive_timeout  65;
+      
+      server {
+        listen       8080;
+        server_name  localhost;
+        
+        location / {
+          root   /usr/share/nginx/html;
+          index  index.html index.htm;
+        }
+      }
+    }

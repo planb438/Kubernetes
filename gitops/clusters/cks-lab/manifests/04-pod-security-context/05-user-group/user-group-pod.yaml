@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: uid-gid-pod
+  namespace: pod-security-lab
+  annotations:
+    cks.exercise: "04-pod-security-context"
+    cks.section: "05-user-group"
+spec:
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000  # Sets group ownership of volumes
+    fsGroupChangePolicy: "OnRootMismatch"  # Only change if root-owned
+    supplementalGroups: [2000, 3000]  # Additional groups
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: busybox:latest
+    command: ["sh", "-c", "id && ls -la /data && sleep 3600"]
+    securityContext:
+      runAsUser: 1000  # Can override pod-level setting
+      runAsGroup: 1000
+    volumeMounts:
+    - name: data
+      mountPath: /data
+  volumes:
+  - name: data
+    emptyDir: {}
