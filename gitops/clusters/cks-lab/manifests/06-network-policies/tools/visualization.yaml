@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netpol-viz
+  namespace: network-policy-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: netpol-viz
+  template:
+    metadata:
+      labels:
+        app: netpol-viz
+    spec:
+      containers:
+      - name: viz
+        image: weaveworks/network-policy-vis:latest
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: netpol-viz
+  namespace: network-policy-lab
+spec:
+  selector:
+    app: netpol-viz
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: ClusterIP

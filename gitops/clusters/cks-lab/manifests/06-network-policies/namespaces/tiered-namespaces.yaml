@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tier-web
+  labels:
+    tier: web
+    security-zone: dmz
+    network-policy: tiered
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tier-app
+  labels:
+    tier: app
+    security-zone: application
+    network-policy: tiered
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tier-data
+  labels:
+    tier: data
+    security-zone: restricted
+    network-policy: tiered
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tier-mgmt
+  labels:
+    tier: management
+    security-zone: management
+    network-policy: tiered

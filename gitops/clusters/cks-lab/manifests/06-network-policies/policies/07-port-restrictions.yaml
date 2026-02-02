@@ -1,0 +1,46 @@
+# Port-specific restrictions
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web-server-restrictions
+  namespace: network-policy-lab
+spec:
+  podSelector:
+    matchLabels:
+      app: web-server
+  policyTypes:
+  - Ingress
+  ingress:
+  # Only allow HTTP/HTTPS from anywhere
+  - ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 443
+    from: []  # Empty = from anywhere (combined with default-deny, this means ALL)
+---
+# Database-specific restrictions
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: database-strict-access
+  namespace: network-policy-lab
+spec:
+  podSelector:
+    matchLabels:
+      app: database
+  policyTypes:
+  - Ingress
+  ingress:
+  # Only allow from app tier on database port
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          tier: app
+      podSelector:
+        matchLabels:
+          app: api-server
+    ports:
+    - protocol: TCP
+      port: 5432
+  # No other ingress allowed (implicit deny)

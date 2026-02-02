@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: network-scanner
+  namespace: network-policy-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: network-scanner
+  template:
+    metadata:
+      labels:
+        app: network-scanner
+    spec:
+      containers:
+      - name: scanner
+        image: aquasec/kube-hunter:latest
+        command: ["kube-hunter"]
+        args: ["--remote", "cluster"]
+        securityContext:
+          runAsNonRoot: true
+          capabilities:
+            drop: ["ALL"]

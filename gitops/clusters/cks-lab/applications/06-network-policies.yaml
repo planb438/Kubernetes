@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cks-06-network-policies
+  namespace: argocd
+  annotations:
+    cks.exercise: "06-network-policies"
+    cks.objective: "Master Kubernetes Network Policies for Zero-Trust Security"
+    cks.difficulty: "intermediate"
+    cks.time: "90 minutes"
+    cks.importance: "CRITICAL for microservices security"
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    category: security
+    component: cks-lab
+    security-control: "network"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/planb438/Kubernetes.git
+    targetRevision: main
+    path: gitops/clusters/cks-lab/manifests/06-network-policies
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: network-policy-lab
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: false
+    syncOptions:
+    - CreateNamespace=true
+    - ApplyOutOfSyncOnly=true

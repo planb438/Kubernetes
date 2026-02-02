@@ -1,0 +1,69 @@
+# Tiered Architecture: Web → App → Data
+# Web tier can talk to App tier
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-web-to-app
+  namespace: tier-app
+spec:
+  podSelector:
+    matchLabels:
+      tier: app
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          tier: web
+    ports:
+    - protocol: TCP
+      port: 8080
+    - protocol: TCP
+      port: 8443
+---
+# App tier can talk to Data tier
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-app-to-data
+  namespace: tier-data
+spec:
+  podSelector:
+    matchLabels:
+      tier: data
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          tier: app
+    ports:
+    - protocol: TCP
+      port: 5432  # PostgreSQL
+    - protocol: TCP
+      port: 6379  # Redis
+    - protocol: TCP
+      port: 27017 # MongoDB
+---
+# Block Data tier from initiating connections to App/Web tiers
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: data-egress-restricted
+  namespace: tier-data
+spec:
+  podSelector:
+    matchLabels:
+      tier: data
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          tier: monitoring  # Only allowed to talk to monitoring
+    ports:
+    - protocol: TCP
+      port: 9090  # Prometheus

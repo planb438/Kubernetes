@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: tier-app
+  labels:
+    app: backend
+    tier: app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+        tier: app
+    spec:
+      containers:
+      - name: api
+        image: bitnami/node:18
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://postgres.tier-data.svc.cluster.local:5432/mydb"

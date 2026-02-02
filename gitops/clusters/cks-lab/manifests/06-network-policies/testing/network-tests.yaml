@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: network-policy-test
+  namespace: network-policy-lab
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: network-tester
+        image: alpine/curl:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "=== Network Policy Test Suite ==="
+          echo ""
+          
+          # Test 1: Can frontend reach backend?
+          echo "Test 1: Web → App Communication"
+          kubectl exec -n tier-web deployment/frontend -c nginx -- \
+            curl -s -o /dev/null -w "%{http_code}" http://backend.tier-app.svc.cluster.local:8080
+          echo "Expected: 200 (allowed)"
+          echo ""
+          
+          # Test 2: Can attacker reach backend?
+          echo "Test 2: Attacker → App Communication"
+          kubectl run -n tier-web attacker --image=alpine/curl --rm -it --restart=Never -- \
+            curl -s -o /dev/null -w "%{http_code}" http://backend.tier-app.svc.cluster.local:8080 || true
+          echo "Expected: Connection refused (blocked)"
+          echo ""
+          
+          # Test 3: Can database initiate connections?
+          echo "Test 3: Data → App Communication"
+          kubectl exec -n tier-data statefulset/postgres -- \
+            curl -s -o /dev/null -w "%{http_code}" http://backend.tier-app.svc.cluster.local:8080
+          echo "Expected: Connection refused (blocked)"
+          echo ""
+          
+          echo "=== Test Complete ==="

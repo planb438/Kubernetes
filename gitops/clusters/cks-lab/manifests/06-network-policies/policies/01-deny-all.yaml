@@ -1,0 +1,29 @@
+# Default Deny All Ingress - Best Practice
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all-ingress
+  namespace: network-policy-lab
+  annotations:
+    cks.exercise: "06-network-policies"
+    cks.policy: "default-deny"
+    cks.purpose: "Zero-trust starting point"
+spec:
+  podSelector: {}  # Applies to ALL pods in namespace
+  policyTypes:
+  - Ingress
+  # No ingress rules = ALL ingress traffic denied
+  # NOTE: This is a starting point. Add allow rules for necessary traffic.
+---
+# Default Deny All Egress - Optional but recommended
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all-egress
+  namespace: network-policy-lab
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  # No egress rules = ALL egress traffic denied
+  # Requires explicit egress rules for external access

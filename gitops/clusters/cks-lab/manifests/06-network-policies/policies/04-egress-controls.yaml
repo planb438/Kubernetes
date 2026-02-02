@@ -1,0 +1,49 @@
+# Control Egress to External Services
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-to-public-apis
+  namespace: network-policy-lab
+spec:
+  podSelector:
+    matchLabels:
+      app: external-api-consumer
+  policyTypes:
+  - Egress
+  egress:
+  # Allow DNS (required for most egress)
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # Allow HTTPS to specific external services
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+    ports:
+    - protocol: TCP
+      port: 443
+---
+# Deny Egress to Metadata Service (Critical for cloud security)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-egress-to-metadata
+  namespace: network-policy-lab
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 169.254.169.254/32  # AWS/GCP/Azure metadata service

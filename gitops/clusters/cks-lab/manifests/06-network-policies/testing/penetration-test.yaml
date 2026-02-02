@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: network-penetration-test
+  namespace: network-policy-lab
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: pentester
+        image: instrumentisto/nmap:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "=== Network Penetration Test ==="
+          echo ""
+          
+          echo "1. Scanning backend service from web tier..."
+          kubectl exec -n tier-web deployment/frontend -c nginx -- \
+            nmap -sS -p 1-1000 backend.tier-app.svc.cluster.local
+          echo ""
+          
+          echo "2. Scanning backend service from unauthorized pod..."
+          kubectl run -n tier-web scanner --image=instrumentisto/nmap --rm -it --restart=Never -- \
+            nmap -sS -p 1-1000 backend.tier-app.svc.cluster.local || true
+          echo ""
+          
+          echo "3. Testing egress to metadata service..."
+          kubectl run -n tier-web metadata-test --image=alpine/curl --rm -it --restart=Never -- \
+            curl -s http://169.254.169.254/latest/meta-data/ || echo "Blocked (good!)"
+          echo ""
+          
+          echo "=== Penetration Test Complete ==="
