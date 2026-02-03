@@ -1,0 +1,191 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: task-01-verification
+  namespace: mock-exam-system
+  annotations:
+    task: "01"
+    points: "15"
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: exam-verifier
+      containers:
+      - name: verifier
+        image: bitnami/kubectl:latest
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          echo "=== Task 1 Verification ==="
+          echo ""
+          
+          TOTAL_POINTS=0
+          
+          # Check 1: Namespace exists (2 points)
+          echo "1. Checking namespace 'app-team1'..."
+          if kubectl get namespace app-team1 >/dev/null 2>&1; then
+            echo "   ✓ Namespace exists"
+            TOTAL_POINTS=$((TOTAL_POINTS + 2))
+          else
+            echo "   ✗ Namespace missing"
+          fi
+          
+          # Check 2: ServiceAccount exists with no auto-mount (3 points)
+          echo ""
+          echo "2. Checking ServiceAccount 'cicd-token'..."
+          if kubectl get serviceaccount cicd-token -n app-team1 >/dev/null 2>&1; then
+            echo "   ✓ ServiceAccount exists"
+            AUTO_MOUNT=$(kubectl get serviceaccount cicd-token -n app-team1 -o jsonpath='{.automountServiceAccountToken}')
+            if [[ "$AUTO_MOUNT" == "false" ]] || [[ -z "$AUTO_MOUNT" ]]; then
+              echo "   ✓ Token auto-mount disabled"
+              TOTAL_POINTS=$((TOTAL_POINTS + 3))
+            else
+              echo "   ✗ Token auto-mount enabled (security issue)"
+            fi
+          else
+            echo "   ✗ ServiceAccount missing"
+          fi
+          
+          # Check 3: Role has correct permissions (5 points)
+          echo ""
+          echo "3. Checking Role permissions..."
+          ROLE_EXISTS=$(kubectl get role cicd-role -n app-team1 2>/dev/null)
+          if [[ -n "$ROLE_EXISTS" ]]; then
+            echo "   ✓ Role exists"
+            # Check for pod permissions
+            POD_PERMS=$(kubectl get role cicd-role -n app-team1 -o json | jq -r '.rules[] | select(.resources[]? == "pods") | .verbs[]' | sort | uniq)
+            if echo "$POD_PERMS" | grep -q "list" && echo "$POD_PERMS" | grep -q "get"; then
+              echo "   ✓ Has pod list/get permissions"
+            else
+              echo "   ✗ Missing pod permissions"
+            fi
+            
+            # Check for configmap permissions
+            CM_PERMS=$(kubectl get role cicd-role -n app-team1 -o json | jq -r '.rules[] | select(.resources[]? == "configmaps") | .verbs[]' | sort | uniq)
+            if echo "$CM_PERMS" | grep -q "create" && echo "$CM_PERMS" | grep -q "update"; then
+              echo "   ✓ Has configmap create/update permissions"
+            else
+              echo "   ✗ Missing configmap permissions"
+            fi
+            
+            # Check no delete permissions
+            HAS_DELETE=$(kubectl get role cicd-role -n app-team1 -o json | jq -r '.rules[].verbs[]' | grep -i "delete")
+            if [[ -z "$HAS_DELETE" ]]; then
+              echo "   ✓ No delete permissions (good)"
+              TOTAL_POINTS=$((TOTAL_POINTS + 5))
+            else
+              echo "   ✗ Has delete permissions (security issue)"
+            fi
+          else
+            echo "   ✗ Role missing"
+          fi
+          
+          # Check 4: RoleBinding exists (2 points)
+          echo ""
+          echo "4. Checking RoleBinding..."
+          if kubectl get rolebinding cicd-binding -n app-team1 >/dev/null 2>&1; then
+            echo "   ✓ RoleBinding exists"
+            BOUND_SA=$(kubectl get rolebinding cicd-binding -n app-team1 -o jsonpath='{.subjects[0].name}')
+            if [[ "$BOUND_SA" == "cicd-token" ]]; then
+              echo "   ✓ Correctly bound to cicd-token"
+              TOTAL_POINTS=$((TOTAL_POINTS + 2))
+            else
+              echo "   ✗ Bound to wrong ServiceAccount"
+            fi
+          else
+            echo "   ✗ RoleBinding missing"
+          fi
+          
+          # Check 5: Functional test (3 points)
+          echo ""
+          echo "5. Running functional test..."
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: test-pod
+            namespace: app-team1
+          spec:
+            containers:
+            - name: test
+              image: alpine
+              command: ["sleep", "3600"]
+          EOF
+          
+          # Test pod listing
+          kubectl run test-sa --rm -it --restart=Never --image=bitnami/kubectl \
+            --namespace=app-team1 \
+            --overrides='{ "spec": { "serviceAccountName": "cicd-token" } }' \
+            --command -- /bin/sh -c "kubectl get pods -n app-team1" >/dev/null 2>&1
+          
+          if [[ $? -eq 0 ]]; then
+            echo "   ✓ Service account can list pods"
+            
+            # Test configmap creation
+            kubectl run test-sa2 --rm -it --restart=Never --image=bitnami/kubectl \
+              --namespace=app-team1 \
+              --overrides='{ "spec": { "serviceAccountName": "cicd-token" } }' \
+              --command -- /bin/sh -c "kubectl create configmap test-cm --from-literal=key=value -n app-team1" >/dev/null 2>&1
+            
+            if [[ $? -eq 0 ]]; then
+              echo "   ✓ Service account can create configmaps"
+              TOTAL_POINTS=$((TOTAL_POINTS + 3))
+            else
+              echo "   ✗ Cannot create configmaps"
+            fi
+            
+            # Cleanup
+            kubectl delete configmap test-cm -n app-team1 --ignore-not-found
+          else
+            echo "   ✗ Cannot list pods"
+          fi
+          
+          kubectl delete pod test-pod -n app-team1 --ignore-not-found
+          
+          echo ""
+          echo "=== Verification Complete ==="
+          echo "Total Points: $TOTAL_POINTS/15"
+          echo ""
+          
+          # Store result
+          echo "{\"task\": \"01\", \"points\": $TOTAL_POINTS, \"max_points\": 15, \"timestamp\": \"$(date -Iseconds)\"}" > /tmp/result.json
+          kubectl create configmap task-01-result --from-file=/tmp/result.json -n mock-exam-system --dry-run=client -o yaml | kubectl apply -f -
+          
+        restartPolicy: Never
+  backoffLimit: 0
+
+
+ # Additional Exam Tasks (Examples)
+# Here are brief examples of other tasks you could create:
+
+#Task 2: Network Policy
+
+# instructions.md
+# Task: Restrict pod-to-pod communication
+# Requirements:
+# 1. Create NetworkPolicy to allow only frontend pods to talk to backend pods on port 8080
+# 2. Block all other ingress traffic to backend pods
+# 3. Allow egress to kube-dns (port 53)
+
+#Task 3: Pod Security Context
+
+# instructions.md
+# Task: Harden pod security
+# Requirements:
+# 1. Create Deployment that runs as non-root user (UID 1000)
+# 2. Disable privilege escalation
+# 3. Drop all capabilities except NET_BIND_SERVICE
+# 4. Use read-only root filesystem
+
+#Task 4: Secret Management
+
+# instructions.md
+# Task: Secure secret handling
+# Requirements:
+# 1. Create encrypted Secret for database credentials
+# 2. Mount as environment variables (not files)
+# 3. Set appropriate permissions (read-only)
+# 4. Use external secret provider (simulated)
+
+
