@@ -1,0 +1,16 @@
+apiVersion: audit.k8s.io/v1
+kind: Policy
+metadata:
+  name: baseline-audit-policy
+  namespace: kube-system
+rules:
+  # Baseline rule - logs all requests at Metadata level
+  - level: Metadata
+    omitStages:
+      - "RequestReceived"
+  
+  # TODO: Modify this policy to meet requirements
+  # 1. Finance namespace only
+  # 2. Request level for secrets
+  # 3. Metadata level for configmaps and pods
+  # 4. Exclude configmap get operations
