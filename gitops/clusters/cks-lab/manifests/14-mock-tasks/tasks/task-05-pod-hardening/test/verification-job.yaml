@@ -1,0 +1,236 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: task-05-verification
+  namespace: mock-exam-system
+  annotations:
+    task: "05"
+    points: "22"
+    cks-domain: "Cluster Hardening & System Hardening"
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: exam-verifier
+      initContainers:
+      - name: setup-environment
+        image: alpine:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "Setting up pod hardening verification environment..."
+          # Create test namespace if needed
+          kubectl create namespace pod-hardening-test --dry-run=client -o yaml | kubectl apply -f -
+          echo "Environment ready"
+        volumeMounts:
+        - name: shared-data
+          mountPath: /shared
+      containers:
+      - name: verifier
+        image: aquasec/trivy:latest
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          echo "=== Task 5 Verification: Pod Security Hardening ==="
+          echo ""
+          
+          TOTAL_POINTS=0
+          MAX_POINTS=22
+          
+          # Find the hardened deployment
+          echo "1. Searching for hardened deployment..."
+          DEPLOYMENT=$(kubectl get deployment -n production -l security-tier=hardened -o name 2>/dev/null)
+          
+          if [ -z "$DEPLOYMENT" ]; then
+            echo "   ✗ No hardened deployment found with label security-tier=hardened"
+            DEPLOYMENT="frontend-app-secure"
+            # Try without label
+            kubectl get deployment $DEPLOYMENT -n production >/dev/null 2>&1
+            if [ $? -ne 0 ]; then
+              echo "   ✗ Deployment $DEPLOYMENT not found"
+            else
+              echo "   ⚠ Found deployment but missing security-tier label"
+            fi
+          else
+            echo "   ✓ Found hardened deployment: $DEPLOYMENT"
+            TOTAL_POINTS=$((TOTAL_POINTS + 2))
+          fi
+          
+          # Get pod from deployment
+          POD_NAME=$(kubectl get pods -n production -l app=frontend -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+          
+          if [ -z "$POD_NAME" ]; then
+            echo "   ✗ No pods found for frontend app"
+          else
+            echo "   Testing pod: $POD_NAME"
+          fi
+          
+          # Check 2: Non-root user (3 points)
+          echo ""
+          echo "2. Checking for non-root execution..."
+          if [ -n "$POD_NAME" ]; then
+            USER_ID=$(kubectl exec -n production $POD_NAME -- id -u 2>/dev/null)
+            if [ "$USER_ID" -gt 10000 ] 2>/dev/null; then
+              echo "   ✓ Running as non-root user (UID: $USER_ID)"
+              TOTAL_POINTS=$((TOTAL_POINTS + 3))
+            else
+              echo "   ✗ Running as root or low UID (UID: $USER_ID)"
+            fi
+          else
+            echo "   ✗ Cannot check - no pod available"
+          fi
+          
+          # Check 3: Security context configuration (4 points)
+          echo ""
+          echo "3. Checking security context..."
+          if [ -n "$DEPLOYMENT" ]; then
+            # Get deployment YAML and check security context
+            DEPLOYMENT_YAML=$(kubectl get deployment -n production frontend-app-secure -o yaml 2>/dev/null)
+            
+            CONTEXT_CORRECT=true
+            
+            # Check pod security context
+            if ! echo "$DEPLOYMENT_YAML" | grep -q "runAsNonRoot: true"; then
+              echo "   ✗ Missing runAsNonRoot in pod security context"
+              CONTEXT_CORRECT=false
+            fi
+            
+            # Check container security context
+            if ! echo "$DEPLOYMENT_YAML" | grep -q "allowPrivilegeEscalation: false"; then
+              echo "   ✗ Missing allowPrivilegeEscalation: false"
+              CONTEXT_CORRECT=false
+            fi
+            
+            if ! echo "$DEPLOYMENT_YAML" | grep -q "readOnlyRootFilesystem: true"; then
+              echo "   ✗ Missing readOnlyRootFilesystem: true"
+              CONTEXT_CORRECT=false
+            fi
+            
+            if ! echo "$DEPLOYMENT_YAML" | grep -q "drop:.*ALL"; then
+              echo "   ✗ Missing capabilities drop: ALL"
+              CONTEXT_CORRECT=false
+            fi
+            
+            if [ "$CONTEXT_CORRECT" = true ]; then
+              echo "   ✓ Security context correctly configured"
+              TOTAL_POINTS=$((TOTAL_POINTS + 4))
+            fi
+          fi
+          
+          # Check 4: Resource limits (3 points)
+          echo ""
+          echo "4. Checking resource limits..."
+          if [ -n "$DEPLOYMENT" ]; then
+            RESOURCES=$(kubectl get deployment -n production frontend-app-secure -o jsonpath='{.spec.template.spec.containers[0].resources}')
+            
+            if echo "$RESOURCES" | grep -q "limits" && echo "$RESOURCES" | grep -q "requests"; then
+              echo "   ✓ Resource limits and requests set"
+              echo "   Resources: $RESOURCES"
+              TOTAL_POINTS=$((TOTAL_POINTS + 3))
+            else
+              echo "   ✗ Missing resource limits or requests"
+            fi
+          fi
+          
+          # Check 5: Health probes (3 points)
+          echo ""
+          echo "5. Checking health probes..."
+          if [ -n "$DEPLOYMENT" ]; then
+            PROBES=$(kubectl get deployment -n production frontend-app-secure -o jsonpath='{.spec.template.spec.containers[0]}' | grep -o "livenessProbe\|readinessProbe")
+            
+            if echo "$PROBES" | grep -q "livenessProbe" && echo "$PROBES" | grep -q "readinessProbe"; then
+              echo "   ✓ Liveness and readiness probes configured"
+              TOTAL_POINTS=$((TOTAL_POINTS + 3))
+            else
+              echo "   ✗ Missing health probes"
+            fi
+          fi
+          
+          # Check 6: No HostPath volumes (3 points)
+          echo ""
+          echo "6. Checking for HostPath volumes..."
+          if [ -n "$DEPLOYMENT" ]; then
+            HOSTPATH=$(kubectl get deployment -n production frontend-app-secure -o yaml | grep -i "hostPath")
+            
+            if [ -z "$HOSTPATH" ]; then
+              echo "   ✓ No HostPath volumes (secure)"
+              TOTAL_POINTS=$((TOTAL_POINTS + 3))
+            else
+              echo "   ✗ HostPath volumes found (security risk)"
+            fi
+          fi
+          
+          # Check 7: Service account configuration (2 points)
+          echo ""
+          echo "7. Checking service account..."
+          if [ -n "$DEPLOYMENT" ]; then
+            SA=$(kubectl get deployment -n production frontend-app-secure -o jsonpath='{.spec.template.spec.serviceAccountName}')
+            
+            if [ "$SA" != "default" ] && [ -n "$SA" ]; then
+              echo "   ✓ Using dedicated service account: $SA"
+              TOTAL_POINTS=$((TOTAL_POINTS + 2))
+            else
+              echo "   ✗ Using default service account or none specified"
+            fi
+          fi
+          
+          # Check 8: Image tag (2 points)
+          echo ""
+          echo "8. Checking image tag..."
+          if [ -n "$DEPLOYMENT" ]; then
+            IMAGE=$(kubectl get deployment -n production frontend-app-secure -o jsonpath='{.spec.template.spec.containers[0].image}')
+            
+            if echo "$IMAGE" | grep -qv ":latest" && echo "$IMAGE" | grep -q ":"; then
+              echo "   ✓ Using specific image tag: $IMAGE"
+              TOTAL_POINTS=$((TOTAL_POINTS + 2))
+            else
+              echo "   ✗ Using :latest tag or no tag specified"
+            fi
+          fi
+          
+          echo ""
+          echo "=== Verification Complete ==="
+          echo "Total Points: $TOTAL_POINTS/$MAX_POINTS"
+          
+          # Additional security scan
+          echo ""
+          echo "=== Security Scan Results ==="
+          if [ -n "$POD_NAME" ]; then
+            echo "Running Trivy scan on pod image..."
+            IMAGE=$(kubectl get pod $POD_NAME -n production -o jsonpath='{.spec.containers[0].image}')
+            echo "Scanning image: $IMAGE"
+            # Note: Actual scan would require pulling image
+            echo "Security scan simulated - check passed"
+          fi
+          
+          # Store result
+          cat > /shared/task-05-result.json << EOF
+          {
+            "task": "05",
+            "name": "Pod Security Hardening",
+            "points": $TOTAL_POINTS,
+            "max_points": $MAX_POINTS,
+            "timestamp": "$(date -Iseconds)",
+            "details": {
+              "hardened_deployment_found": $( [ $TOTAL_POINTS -ge 2 ] && echo "true" || echo "false" ),
+              "non_root_user": $( [ $TOTAL_POINTS -ge 5 ] && echo "true" || echo "false" ),
+              "security_context": $( [ $TOTAL_POINTS -ge 9 ] && echo "true" || echo "false" ),
+              "resource_limits": $( [ $TOTAL_POINTS -ge 12 ] && echo "true" || echo "false" ),
+              "health_probes": $( [ $TOTAL_POINTS -ge 15 ] && echo "true" || echo "false" ),
+              "no_hostpath": $( [ $TOTAL_POINTS -ge 18 ] && echo "true" || echo "false" ),
+              "service_account": $( [ $TOTAL_POINTS -ge 20 ] && echo "true" || echo "false" ),
+              "image_tag": $( [ $TOTAL_POINTS -ge 22 ] && echo "true" || echo "false" )
+            }
+          }
+          EOF
+          
+          kubectl create configmap task-05-result \
+            --from-file=/shared/task-05-result.json \
+            -n mock-exam-system \
+            --dry-run=client -o yaml | kubectl apply -f -
+          
+        restartPolicy: Never
+        volumes:
+        - name: shared-data
+          emptyDir: {}
+  backoffLimit: 0

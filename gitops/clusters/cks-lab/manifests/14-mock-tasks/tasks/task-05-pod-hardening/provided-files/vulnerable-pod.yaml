@@ -1,0 +1,77 @@
+# THIS IS THE VULNERABLE POD - DO NOT DEPLOY IN PRODUCTION
+# Security audit findings: 8 CRITICAL, 12 HIGH vulnerabilities
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-app
+  namespace: production
+  labels:
+    app: frontend
+    tier: web
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+        tier: web
+    spec:
+      # SECURITY ISSUE: No security context at pod level
+      containers:
+      - name: nginx
+        image: nginx:latest  # ISSUE: Using latest tag
+        # SECURITY ISSUE: Running as root (default)
+        # SECURITY ISSUE: No resource limits
+        # SECURITY ISSUE: No security context
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 443
+          name: https
+        # SECURITY ISSUE: Privilege escalation allowed (default)
+        # SECURITY ISSUE: All capabilities available (default)
+        # SECURITY ISSUE: Writable root filesystem (default)
+        volumeMounts:
+        - name: config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        - name: logs
+          mountPath: /var/log/nginx
+        - name: host-tmp  # CRITICAL: HostPath mount
+          mountPath: /host-tmp
+        # SECURITY ISSUE: No liveness/readiness probes
+        command: ["nginx"]
+        args: ["-g", "daemon off;"]
+      volumes:
+      - name: config
+        configMap:
+          name: nginx-config
+      - name: logs
+        emptyDir: {}
+      - name: host-tmp  # CRITICAL: Mounts host /tmp
+        hostPath:
+          path: /tmp
+          type: Directory
+      # SECURITY ISSUE: No affinity/anti-affinity rules
+      # SECURITY ISSUE: No node selector
+---
+# Service for the deployment
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: production
+spec:
+  selector:
+    app: frontend
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+  - name: https
+    port: 443
+    targetPort: https
+  type: ClusterIP

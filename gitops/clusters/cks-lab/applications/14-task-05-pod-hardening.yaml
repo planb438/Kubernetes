@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: 14-task-05-pod-hardening
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+    cks-task: "05"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/planb438/Kubernetes.git
+    targetRevision: HEAD
+    path: gitops/clusters/cks-lab/manifests/14-mock-tasks/task-05-pod-hardening/provided-files
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mock-exam-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+  info:
+    - name: Description
+      value: "Task 5 - Pod Security Hardening and Compliance"
+    - name: Points
+      value: "22"
+    - name: Time Limit
+      value: "18 minutes"
+    - name: CKS Domain
+      value: "Cluster Hardening & System Hardening"
+    - name: Key Skills
+      value: "Security Context, Capabilities, Resource Limits, Health Probes"

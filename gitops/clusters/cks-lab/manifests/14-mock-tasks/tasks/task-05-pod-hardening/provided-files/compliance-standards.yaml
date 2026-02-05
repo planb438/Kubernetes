@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: security-standards
+  namespace: security-system
+data:
+  cis-benchmark.yaml: |
+    requirements:
+      podSecurity:
+        - id: "5.7.1"
+          description: "Minimize the admission of privileged containers"
+          requirement: "Do not admit privileged containers"
+          level: "Level 1"
+        - id: "5.7.2"
+          description: "Minimize the admission of containers wishing to share the host process ID namespace"
+          requirement: "Do not admit containers with hostPID: true"
+          level: "Level 1"
+        - id: "5.7.3"
+          description: "Minimize the admission of containers wishing to share the host IPC namespace"
+          requirement: "Do not admit containers with hostIPC: true"
+          level: "Level 1"
+        - id: "5.7.4"
+          description: "Minimize the admission of containers wishing to share the host network namespace"
+          requirement: "Do not admit containers with hostNetwork: true"
+          level: "Level 1"
+        - id: "5.7.5"
+          description: "Minimize the admission of containers with allowPrivilegeEscalation"
+          requirement: "Do not admit containers with allowPrivilegeEscalation: true"
+          level: "Level 1"
+  
+  nist-requirements.yaml: |
+    requirements:
+      - control: "AC-3"
+        name: "Access Enforcement"
+        requirements:
+          - "Containers run as non-root users"
+          - "Principle of least privilege for capabilities"
+          - "Mandatory access control (AppArmor/SELinux)"
+      - control: "SC-1"
+        name: "System and Communications Protection"
+        requirements:
+          - "Network segmentation between containers"
+          - "Encryption of data in transit"
+          - "Secure configuration of container runtimes"
+  
+  company-policy.yaml: |
+    requirements:
+      production:
+        - category: "Identity"
+          requirements:
+            - "Non-root execution (UID > 10000)"
+            - "Dedicated service accounts"
+            - "No default service account usage"
+        - category: "Privileges"
+          requirements:
+            - "Privilege escalation disabled"
+            - "No privileged containers"
+            - "No host namespace sharing"
+        - category: "Capabilities"
+          requirements:
+            - "Drop ALL capabilities"
+            - "Add only explicitly required capabilities"
+            - "Prohibit dangerous capabilities"
+        - category: "Filesystem"
+          requirements:
+            - "Read-only root filesystem"
+            - "No HostPath volumes"
+            - "Appropriate mount propagation"
+        - category: "Resources"
+          requirements:
+            - "Memory limits set"
+            - "CPU limits set"
+            - "Resource requests set"
