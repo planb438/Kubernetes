@@ -1,0 +1,149 @@
+# Hint 1: Kyverno Policy Structure for Host Access Blocking (Cost: 2 points)
+
+## Basic Policy Structure
+```yaml
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: block-host-access
+spec:
+  validationFailureAction: Enforce
+  rules:
+  - name: block-host-network
+    match:
+      resources:
+        kinds: [Pod, Deployment]
+    validate:
+      message: "hostNetwork is not allowed"
+      deny:
+        conditions:
+          - key: "{{ request.object.spec.hostNetwork }}"
+            operator: Equals
+            value: true
+Key Rules for Host Access Blocking
+1. Block Host Namespace Sharing
+yaml
+- name: block-host-namespaces
+  validate:
+    deny:
+      conditions:
+        any:
+        - key: "{{ request.object.spec.hostNetwork }}"
+          operator: Equals
+          value: true
+        - key: "{{ request.object.spec.hostPID }}"
+          operator: Equals
+          value: true
+        - key: "{{ request.object.spec.hostIPC }}"
+          operator: Equals
+          value: true
+2. Block HostPath Volumes
+yaml
+- name: block-hostpath-volumes
+  foreach:
+  - list: "request.object.spec.volumes[]"
+    deny:
+      conditions:
+        any:
+        - key: "{{ element.hostPath }}"
+          operator: NotEquals
+          value: null
+3. Block Privileged Containers
+yaml
+- name: block-privileged-containers
+  pattern:
+    spec:
+      containers:
+      - securityContext:
+          privileged: false
+4. Block Root Execution
+yaml
+- name: block-root-execution
+  pattern:
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+      - securityContext:
+          =(runAsUser): "!=0"
+Exception Handling
+Namespace Exceptions
+yaml
+exclude:
+  resources:
+    namespaces:
+    - kube-system
+    - monitoring
+Specific Workload Exceptions
+yaml
+exclude:
+  resources:
+    namespaces: [kube-system]
+  subjects:
+  - kind: ServiceAccount
+    name: kube-proxy
+Testing Your Policies
+Test Pod Creation
+bash
+# Test hostNetwork blocking
+kubectl run test-hostnetwork --image=alpine --hostNetwork=true --dry-run=server
+
+# Test hostPath blocking  
+kubectl run test-hostpath --image=alpine -v='{"name":"test","hostPath":{"path":"/etc"}}' --dry-run=server
+
+# Test privileged container blocking
+kubectl run test-privileged --image=alpine --privileged --dry-run=server
+Check Policy Status
+bash
+# List all policies
+kubectl get clusterpolicies
+
+# View policy details
+kubectl describe clusterpolicy block-host-access
+
+# Check policy violations
+kubectl get policyreport -A
+Common Issues and Solutions
+1. Policy Not Blocking
+Check validationFailureAction: Enforce
+
+Verify policy is in correct namespace
+
+Check match rules include your resource kind
+
+2. False Positives
+Add appropriate exclusions
+
+Use context for dynamic values
+
+Test with --dry-run=server first
+
+3. Performance Issues
+Use background: false for critical policies
+
+Optimize match expressions
+
+Consider separate policies for different rules
+
+Integration with PSA
+PSA Labels
+yaml
+metadata:
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+Combined Approach
+Use PSA for baseline enforcement
+
+Use Kyverno for custom rules
+
+Use admission webhooks for complex logic
+
+Monitor with PolicyReport resources
+
+Resources
+Kyverno Documentation: https://kyverno.io/docs/
+
+Pod Security Standards: https://kubernetes.io/docs/concepts/security/pod-security-standards/
+
+CIS Kubernetes Benchmark: https://www.cisecurity.org/benchmark/kubernetes

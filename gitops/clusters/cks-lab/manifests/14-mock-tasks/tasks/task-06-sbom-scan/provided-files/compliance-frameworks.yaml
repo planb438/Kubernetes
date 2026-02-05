@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compliance-frameworks
+  namespace: sbom-system
+data:
+  nist-ssdf.yaml: |
+    framework: "NIST SSDF"
+    version: "1.1"
+    requirements:
+      - id: "PO.1"
+        description: "Identify and document software components"
+        requirements:
+          - "Maintain inventory of software components"
+          - "Document component relationships"
+          - "Track component versions"
+      
+      - id: "PS.3"
+        description: "Generate and archive SBOMs"
+        requirements:
+          - "SBOM for all software releases"
+          - "Machine-readable format"
+          - "Secure storage with integrity protection"
+      
+      - id: "PW.8"
+        description: "Verify third-party software components"
+        requirements:
+          - "Vulnerability scanning of dependencies"
+          - "License compliance checking"
+          - "Provenance verification"
+  
+  cisa-sbom.yaml: |
+    framework: "CISA SBOM"
+    version: "2023"
+    minimum_elements:
+      - field: "supplier_name"
+        requirement: "Mandatory"
+        description: "Name of the entity that created the SBOM"
+      
+      - field: "component_name"
+        requirement: "Mandatory"
+        description: "Name of the software component"
+      
+      - field: "version_string"
+        requirement: "Mandatory"
+        description: "Version of the software component"
+      
+      - field: "dependency_relationship"
+        requirement: "Mandatory"
+        description: "Relationship between components"
+      
+      - field: "timestamp"
+        requirement: "Mandatory"
+        description: "Date and time of SBOM creation"
+    
+    formats:
+      - name: "SPDX"
+        minimum_version: "2.3"
+        required: true
+      
+      - name: "CycloneDX"
+        minimum_version: "1.5"
+        required: false
+  
+  company-policy.yaml: |
+    framework: "Company Security Policy"
+    version: "4.0"
+    effective_date: "2024-01-01"
+    
+    requirements:
+      sbom:
+        - "SBOM required for all production containers"
+        - "Daily SBOM generation for critical applications"
+        - "SBOM signed with Cosign for integrity"
+        - "7-year retention of historical SBOMs"
+      
+      scanning:
+        - "Vulnerability scan on every image push"
+        - "Block deployment on CRITICAL vulnerabilities"
+        - "Weekly scan of all running containers"
+        - "Integration with vulnerability management system"
+      
+      reporting:
+        - "Monthly vulnerability dashboard"
+        - "Quarterly compliance report"
+        - "Real-time alerts for new critical vulnerabilities"
+        - "Audit trail for all scan activities"

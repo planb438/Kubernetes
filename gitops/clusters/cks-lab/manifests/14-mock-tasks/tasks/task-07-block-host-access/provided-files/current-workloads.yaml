@@ -1,0 +1,178 @@
+# Current cluster workloads - some have dangerous configurations
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+  labels:
+    environment: production
+    security-tier: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: development
+  labels:
+    environment: development
+    security-tier: baseline
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    environment: monitoring
+---
+# DANGEROUS: Host network access for monitoring
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-monitor
+  namespace: monitoring
+  annotations:
+    warning: "This uses hostNetwork for monitoring - needs exception"
+spec:
+  selector:
+    matchLabels:
+      app: node-monitor
+  template:
+    metadata:
+      labels:
+        app: node-monitor
+    spec:
+      hostNetwork: true  # VIOLATION: Uses host network
+      containers:
+      - name: monitor
+        image: prom/node-exporter:latest
+        ports:
+        - containerPort: 9100
+          hostPort: 9100
+---
+# DANGEROUS: HostPath volume for logs
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-collector
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: log-collector
+  template:
+    metadata:
+      labels:
+        app: log-collector
+    spec:
+      containers:
+      - name: collector
+        image: fluent/fluentd:latest
+        volumeMounts:
+        - name: host-logs
+          mountPath: /var/log/host
+      volumes:
+      - name: host-logs
+        hostPath:  # VIOLATION: Mounts host logs
+          path: /var/log
+          type: Directory
+---
+# DANGEROUS: Privileged container for device access
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: device-manager
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: device-manager
+  template:
+    metadata:
+      labels:
+        app: device-manager
+    spec:
+      containers:
+      - name: manager
+        image: nvidia/cuda:latest
+        securityContext:
+          privileged: true  # VIOLATION: Privileged container
+---
+# DANGEROUS: Runs as root with hostPID
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legacy-app
+  namespace: development
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: legacy-app
+  template:
+    metadata:
+      labels:
+        app: legacy-app
+    spec:
+      hostPID: true  # VIOLATION: Shares host PID namespace
+      containers:
+      - name: app
+        image: legacy/app:1.0
+        securityContext:
+          runAsUser: 0  # VIOLATION: Runs as root
+---
+# SECURE: Example of good configuration
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secure-app
+  namespace: production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: secure-app
+  template:
+    metadata:
+      labels:
+        app: secure-app
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+      - name: app
+        image: nginx:alpine
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        ports:
+        - containerPort: 80
+---
+# System workload that needs exemption
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kube-proxy
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      k8s-app: kube-proxy
+  template:
+    metadata:
+      labels:
+        k8s-app: kube-proxy
+    spec:
+      hostNetwork: true  # ALLOWED: System component
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      containers:
+      - name: kube-proxy
+        image: registry.k8s.io/kube-proxy:v1.28.0
+        command:
+        - /usr/local/bin/kube-proxy
+        securityContext:
+          privileged: true  # ALLOWED: System component

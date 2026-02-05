@@ -1,0 +1,260 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: block-host-access
+  annotations:
+    policies.kyverno.io/title: "Block Host Access and Privilege Escalation"
+    policies.kyverno.io/category: "Security"
+    policies.kyverno.io/severity: "high"
+    policies.kyverno.io/subject: "Pod,Deployment,StatefulSet,DaemonSet,Job,CronJob"
+    policies.kyverno.io/description: |
+      Prevents containers from accessing host resources and escalating privileges.
+      Blocks hostNetwork, hostPID, hostIPC, hostPath volumes, and privileged containers.
+      Enforces least privilege and prevents container escape attacks.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+  # Rule 1: Block host namespace sharing
+  - name: block-host-namespace-sharing
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+          - Job
+          - CronJob
+    exclude:
+      any:
+      - resources:
+          namespaces:
+          - kube-system
+        subjects:
+        - kind: ServiceAccount
+          name: kube-proxy
+      - resources:
+          namespaces:
+          - kube-system
+        subjects:
+        - kind: ServiceAccount
+          name: node-exporter
+    validate:
+      message: "Host namespace sharing (hostNetwork/hostPID/hostIPC) is not allowed"
+      deny:
+        conditions:
+          any:
+          - key: "{{ request.object.spec.hostNetwork }}"
+            operator: Equals
+            value: true
+          - key: "{{ request.object.spec.hostPID }}"
+            operator: Equals
+            value: true
+          - key: "{{ request.object.spec.hostIPC }}"
+            operator: Equals
+            value: true
+  
+  # Rule 2: Block hostPath volumes (with allowlist)
+  - name: block-hostpath-volumes
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+    context:
+    - name: allowedHostPaths
+      configMap:
+        name: allowed-hostpaths
+        namespace: kyverno
+        key: paths.yaml
+    validate:
+      message: "hostPath volumes are not allowed. Allowed paths: /var/lib/kubelet/pods, /var/run/secrets/kubernetes.io"
+      foreach:
+      - list: "request.object.spec.volumes[]"
+        deny:
+          conditions:
+            any:
+            - key: "{{ element.hostPath.path }}"
+              operator: NotIn
+              value: "{{ allowedHostPaths.paths }}"
+  
+  # Rule 3: Block privileged containers
+  - name: block-privileged-containers
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+    exclude:
+      any:
+      - resources:
+          namespaces:
+          - kube-system
+      - resources:
+          namespaces:
+          - monitoring
+        subjects:
+        - kind: ServiceAccount
+          name: node-exporter
+    validate:
+      message: "Privileged containers are not allowed in production namespaces"
+      pattern:
+        spec:
+          containers:
+          - securityContext:
+              privileged: false
+  
+  # Rule 4: Block root execution
+  - name: block-root-execution
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+        namespaces:
+        - production
+        - staging
+    validate:
+      message: "Containers must not run as root (UID 0) in production namespaces"
+      pattern:
+        spec:
+          securityContext:
+            runAsNonRoot: true
+          containers:
+          - securityContext:
+              =(runAsUser): "!=0"
+  
+  # Rule 5: Block privilege escalation
+  - name: block-privilege-escalation
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+    validate:
+      message: "Privilege escalation must be disabled (allowPrivilegeEscalation: false)"
+      pattern:
+        spec:
+          containers:
+          - securityContext:
+              allowPrivilegeEscalation: false
+  
+  # Rule 6: Block dangerous capabilities
+  - name: block-dangerous-capabilities
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+    context:
+    - name: dangerousCapabilities
+      configMap:
+        name: security-config
+        namespace: kyverno
+        key: dangerous-capabilities.yaml
+    validate:
+      message: "Dangerous capabilities (NET_RAW, SYS_ADMIN, etc.) are not allowed"
+      foreach:
+      - list: "request.object.spec.containers"
+        deny:
+          conditions:
+            any:
+            - key: "{{ element.securityContext.capabilities.add[] }}"
+              operator: AnyIn
+              value: "{{ dangerousCapabilities.capabilities }}"
+  
+  # Rule 7: Require security context
+  - name: require-security-context
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+        namespaces:
+        - production
+    validate:
+      message: "Production pods must have security context defined"
+      pattern:
+        spec:
+          securityContext:
+            seccompProfile:
+              type: "RuntimeDefault"
+          containers:
+          - securityContext:
+              capabilities:
+                drop:
+                - "ALL"
+  
+  # Rule 8: Log all violations (background rule)
+  - name: log-host-access-violations
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+    context:
+    - name: violation
+      variable:
+        value: "{{ request.object }}"
+    validate:
+      message: "Logging host access policy check"
+      pattern:
+        metadata:
+          annotations:
+            security-scan: "passed"
+---
+# ConfigMap for allowed host paths
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: allowed-hostpaths
+  namespace: kyverno
+data:
+  paths.yaml: |
+    paths:
+      - "/var/lib/kubelet/pods"
+      - "/var/run/secrets/kubernetes.io"
+      - "/etc/kubernetes"
+      - "/var/lib/docker"
+      - "/var/lib/containerd"
+---
+# ConfigMap for dangerous capabilities
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: security-config
+  namespace: kyverno
+data:
+  dangerous-capabilities.yaml: |
+    capabilities:
+      - "NET_RAW"
+      - "SYS_ADMIN"
+      - "SYS_MODULE"
+      - "SYS_PTRACE"
+      - "SYS_RAWIO"
+      - "SYS_TIME"
+      - "SYSLOG"
+      - "WAKE_ALARM"

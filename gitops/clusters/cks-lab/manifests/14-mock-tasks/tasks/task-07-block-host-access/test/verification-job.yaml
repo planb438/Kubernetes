@@ -1,0 +1,277 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: task-07-verification
+  namespace: mock-exam-system
+  annotations:
+    task: "07"
+    points: "24"
+    cks-domain: "Cluster Hardening & System Hardening"
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: exam-verifier
+      initContainers:
+      - name: setup-test-environment
+        image: alpine:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "Setting up host access blocking test environment..."
+          # Create test namespace
+          kubectl create namespace host-access-test --dry-run=client -o yaml | kubectl apply -f -
+          kubectl label namespace host-access-test security-scan-enabled=true
+          echo "Test environment ready"
+        volumeMounts:
+        - name: shared-data
+          mountPath: /shared
+      containers:
+      - name: verifier
+        image: bitnami/kubectl:latest
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          echo "=== Task 7 Verification: Block Host Access ==="
+          echo ""
+          
+          TOTAL_POINTS=0
+          MAX_POINTS=24
+          
+          # Check 1: Kyverno policy exists (4 points)
+          echo "1. Checking Kyverno ClusterPolicy..."
+          if kubectl get clusterpolicy block-host-access >/dev/null 2>&1; then
+            echo "   ✓ block-host-access policy exists"
+            
+            # Check policy rules
+            POLICY=$(kubectl get clusterpolicy block-host-access -o yaml)
+            RULE_COUNT=$(echo "$POLICY" | grep -c "name:")
+            
+            if [ "$RULE_COUNT" -ge 6 ]; then
+              echo "   ✓ Policy has $RULE_COUNT rules (comprehensive)"
+              TOTAL_POINTS=$((TOTAL_POINTS + 4))
+            else
+              echo "   ⚠ Policy only has $RULE_COUNT rules (should have 6+)"
+              TOTAL_POINTS=$((TOTAL_POINTS + 2))
+            fi
+          else
+            echo "   ✗ Kyverno policy missing"
+          fi
+          
+          # Check 2: Pod Security Admission labels (4 points)
+          echo ""
+          echo "2. Checking Pod Security Admission configuration..."
+          
+          # Check production namespace
+          PROD_LABELS=$(kubectl get namespace production -o jsonpath='{.metadata.labels}' 2>/dev/null)
+          if echo "$PROD_LABELS" | grep -q "pod-security.kubernetes.io/enforce: restricted"; then
+            echo "   ✓ Production namespace has PSA restricted enforcement"
+            TOTAL_POINTS=$((TOTAL_POINTS + 2))
+          else
+            echo "   ✗ Production namespace missing PSA restricted enforcement"
+          fi
+          
+          # Check development namespace
+          DEV_LABELS=$(kubectl get namespace development -o jsonpath='{.metadata.labels}' 2>/dev/null)
+          if echo "$DEV_LABELS" | grep -q "pod-security.kubernetes.io/enforce: privileged"; then
+            echo "   ✓ Development namespace has appropriate PSA level"
+            TOTAL_POINTS=$((TOTAL_POINTS + 2))
+          else
+            echo "   ⚠ Development namespace PSA configuration unexpected"
+          fi
+          
+          # Check 3: Test hostNetwork blocking (4 points)
+          echo ""
+          echo "3. Testing hostNetwork blocking..."
+          
+          cat > /tmp/hostnetwork-test.yaml << EOF
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: test-hostnetwork
+            namespace: host-access-test
+          spec:
+            hostNetwork: true
+            containers:
+            - name: test
+              image: alpine
+              command: ["sleep", "3600"]
+          EOF
+          
+          kubectl apply -f /tmp/hostnetwork-test.yaml --dry-run=server 2>&1 | grep -qi "denied\|failed\|not allowed"
+          
+          if [ $? -eq 0 ]; then
+            echo "   ✓ hostNetwork correctly blocked"
+            TOTAL_POINTS=$((TOTAL_POINTS + 4))
+          else
+            echo "   ✗ hostNetwork not blocked (security failure)"
+            # Try actual apply to see error
+            kubectl apply -f /tmp/hostnetwork-test.yaml 2>&1 | head -3
+          fi
+          
+          # Check 4: Test hostPath blocking (4 points)
+          echo ""
+          echo "4. Testing hostPath blocking..."
+          
+          cat > /tmp/hostpath-test.yaml << EOF
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: test-hostpath
+            namespace: host-access-test
+          spec:
+            containers:
+            - name: test
+              image: alpine
+              command: ["sleep", "3600"]
+              volumeMounts:
+              - name: test-volume
+                mountPath: /test
+            volumes:
+            - name: test-volume
+              hostPath:
+                path: /etc
+                type: Directory
+          EOF
+          
+          kubectl apply -f /tmp/hostpath-test.yaml --dry-run=server 2>&1 | grep -qi "denied\|failed\|not allowed"
+          
+          if [ $? -eq 0 ]; then
+            echo "   ✓ hostPath correctly blocked"
+            TOTAL_POINTS=$((TOTAL_POINTS + 4))
+          else
+            echo "   ✗ hostPath not blocked (security failure)"
+          fi
+          
+          # Check 5: Test privileged container blocking (4 points)
+          echo ""
+          echo "5. Testing privileged container blocking..."
+          
+          cat > /tmp/privileged-test.yaml << EOF
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: test-privileged
+            namespace: host-access-test
+          spec:
+            containers:
+            - name: test
+              image: alpine
+              command: ["sleep", "3600"]
+              securityContext:
+                privileged: true
+          EOF
+          
+          kubectl apply -f /tmp/privileged-test.yaml --dry-run=server 2>&1 | grep -qi "denied\|failed\|not allowed"
+          
+          if [ $? -eq 0 ]; then
+            echo "   ✓ Privileged containers correctly blocked"
+            TOTAL_POINTS=$((TOTAL_POINTS + 4))
+          else
+            echo "   ✗ Privileged containers not blocked"
+          fi
+          
+          # Check 6: Test root execution blocking (4 points)
+          echo ""
+          echo "6. Testing root execution blocking..."
+          
+          cat > /tmp/root-test.yaml << EOF
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: test-root
+            namespace: host-access-test
+          spec:
+            containers:
+            - name: test
+              image: alpine
+              command: ["sleep", "3600"]
+              securityContext:
+                runAsUser: 0
+          EOF
+          
+          kubectl apply -f /tmp/root-test.yaml --dry-run=server 2>&1 | grep -qi "denied\|failed\|not allowed"
+          
+          if [ $? -eq 0 ]; then
+            echo "   ✓ Root execution correctly blocked in test namespace"
+            TOTAL_POINTS=$((TOTAL_POINTS + 4))
+          else
+            echo "   ✗ Root execution not blocked"
+          fi
+          
+          # Cleanup
+          kubectl delete namespace host-access-test --ignore-not-found 2>/dev/null
+          rm -f /tmp/*-test.yaml
+          
+          echo ""
+          echo "=== Verification Complete ==="
+          echo "Total Points: $TOTAL_POINTS/$MAX_POINTS"
+          
+          # Generate security assessment
+          cat > /shared/task-07-security-assessment.md << EOF
+          ## Host Access Security Assessment
+          
+          ### Policy Coverage
+          - Host namespace sharing: $( [ $TOTAL_POINTS -ge 8 ] && echo "✅ BLOCKED" || echo "❌ ALLOWED" )
+          - HostPath volumes: $( [ $TOTAL_POINTS -ge 12 ] && echo "✅ BLOCKED" || echo "❌ ALLOWED" )
+          - Privileged containers: $( [ $TOTAL_POINTS -ge 16 ] && echo "✅ BLOCKED" || echo "❌ ALLOWED" )
+          - Root execution: $( [ $TOTAL_POINTS -ge 20 ] && echo "✅ BLOCKED" || echo "❌ ALLOWED" )
+          - PSA configuration: $( [ $TOTAL_POINTS -ge 22 ] && echo "✅ CONFIGURED" || echo "❌ MISSING" )
+          
+          ### Security Posture
+          $(if [ $TOTAL_POINTS -ge 20 ]; then
+            echo "**SECURE**: Comprehensive host access controls implemented"
+            echo "- Defense in depth with multiple policy layers"
+            echo "- Both preventive and detective controls"
+            echo "- Proper exception handling for system workloads"
+          elif [ $TOTAL_POINTS -ge 12 ]; then
+            echo "**MODERATE**: Basic controls implemented"
+            echo "- Some host access vectors blocked"
+            echo "- Additional controls needed for full coverage"
+            echo "- Consider implementing admission webhook"
+          else
+            echo "**WEAK**: Inadequate host access controls"
+            echo "- Critical security gaps present"
+            echo "- Immediate remediation required"
+            echo "- Implement Kyverno policies and PSA"
+          fi)
+          
+          ### Recommendations
+          1. Ensure all namespaces have appropriate PSA labels
+          2. Implement monitoring for policy violations
+          3. Regular audit of exceptions and approvals
+          4. Security training for development teams
+          5. Regular penetration testing
+          EOF
+          
+          # Store result
+          cat > /shared/task-07-result.json << EOF
+          {
+            "task": "07",
+            "name": "Block Host Access and Privilege Escalation",
+            "points": $TOTAL_POINTS,
+            "max_points": $MAX_POINTS,
+            "timestamp": "$(date -Iseconds)",
+            "details": {
+              "kyverno_policy": $( [ $TOTAL_POINTS -ge 4 ] && echo "true" || echo "false" ),
+              "psa_configuration": $( [ $TOTAL_POINTS -ge 8 ] && echo "true" || echo "false" ),
+              "hostnetwork_blocked": $( [ $TOTAL_POINTS -ge 12 ] && echo "true" || echo "false" ),
+              "hostpath_blocked": $( [ $TOTAL_POINTS -ge 16 ] && echo "true" || echo "false" ),
+              "privileged_blocked": $( [ $TOTAL_POINTS -ge 20 ] && echo "true" || echo "false" ),
+              "root_blocked": $( [ $TOTAL_POINTS -ge 24 ] && echo "true" || echo "false" )
+            },
+            "security_level": "$(if [ $TOTAL_POINTS -ge 20 ]; then echo "secure"; elif [ $TOTAL_POINTS -ge 12 ]; then echo "moderate"; else echo "weak"; fi)"
+          }
+          EOF
+          
+          kubectl create configmap task-07-result \
+            --from-file=/shared/task-07-result.json \
+            --from-file=/shared/task-07-security-assessment.md \
+            -n mock-exam-system \
+            --dry-run=client -o yaml | kubectl apply -f -
+          
+        restartPolicy: Never
+        volumes:
+        - name: shared-data
+          emptyDir: {}
+  backoffLimit: 0

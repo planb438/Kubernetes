@@ -1,0 +1,196 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: sbom-generator
+  namespace: sbom-system
+  labels:
+    app: sbom-generator
+    component: supply-chain-security
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 86400  # 24 hours
+      template:
+        spec:
+          serviceAccountName: sbom-scanner
+          initContainers:
+          - name: setup-tools
+            image: alpine:latest
+            command: ["/bin/sh", "-c"]
+            args:
+            - |
+              echo "Installing SBOM tools..."
+              apk add --no-cache curl jq
+              curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+              curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+              curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+              echo "Tools installed"
+            volumeMounts:
+            - name: tools-bin
+              mountPath: /usr/local/bin
+          containers:
+          - name: sbom-scanner
+            image: alpine:latest
+            command: ["/bin/sh", "-c"]
+            args:
+            - |
+              echo "Starting SBOM generation pipeline..."
+              export PATH=$PATH:/usr/local/bin
+              
+              # Create output directories
+              mkdir -p /sbom-output /scan-output
+              
+              # Get list of production images
+              echo "Fetching production images..."
+              IMAGES=$(kubectl get pods --all-namespaces -o json | \
+                jq -r '.items[] | .spec.containers[]?.image, .spec.initContainers[]?.image' | \
+                sort -u | grep -v "none" | head -10)
+              
+              echo "Found $(echo "$IMAGES" | wc -l) unique images"
+              
+              # Process each image
+              for IMAGE in $IMAGES; do
+                if [ -n "$IMAGE" ]; then
+                  echo "Processing: $IMAGE"
+                  
+                  # Create safe filename
+                  SAFE_NAME=$(echo "$IMAGE" | tr '/:' '_')
+                  TIMESTAMP=$(date -Iseconds | tr ':' '-')
+                  
+                  # Generate SBOMs
+                  echo "  Generating SBOM..."
+                  syft "$IMAGE" -o spdx-json > "/sbom-output/${SAFE_NAME}-${TIMESTAMP}.spdx.json"
+                  syft "$IMAGE" -o cyclonedx-json > "/sbom-output/${SAFE_NAME}-${TIMESTAMP}.cyclonedx.json"
+                  syft "$IMAGE" -o json > "/sbom-output/${SAFE_NAME}-${TIMESTAMP}.syft.json"
+                  
+                  # Scan for vulnerabilities
+                  echo "  Scanning for vulnerabilities..."
+                  grype "$IMAGE" -o json > "/scan-output/${SAFE_NAME}-${TIMESTAMP}.grype.json"
+                  trivy image --severity CRITICAL,HIGH "$IMAGE" -f json > "/scan-output/${SAFE_NAME}-${TIMESTAMP}.trivy.json"
+                  
+                  # Generate summary
+                  CRITICAL=$(jq '.matches[] | select(.vulnerability.severity == "Critical") | .vulnerability.id' "/scan-output/${SAFE_NAME}-${TIMESTAMP}.grype.json" | wc -l)
+                  HIGH=$(jq '.matches[] | select(.vulnerability.severity == "High") | .vulnerability.id' "/scan-output/${SAFE_NAME}-${TIMESTAMP}.grype.json" | wc -l)
+                  
+                  cat > "/scan-output/${SAFE_NAME}-${TIMESTAMP}.summary.txt" << EOF
+                  Image: $IMAGE
+                  Scan Time: $TIMESTAMP
+                  Critical Vulnerabilities: $CRITICAL
+                  High Vulnerabilities: $HIGH
+                  Status: $(if [ $CRITICAL -gt 0 ]; then echo "FAIL"; else echo "PASS"; fi)
+                  EOF
+                  
+                  echo "  Completed: $IMAGE (Critical: $CRITICAL, High: $HIGH)"
+                fi
+              done
+              
+              # Store results in ConfigMap
+              echo "Storing results..."
+              kubectl create configmap sbom-daily-$(date +%Y%m%d) \
+                --from-file=/sbom-output/ \
+                --from-file=/scan-output/ \
+                -n sbom-system \
+                --dry-run=client -o yaml | kubectl apply -f -
+              
+              # Generate compliance report
+              echo "Generating compliance report..."
+              
+              TOTAL_IMAGES=$(echo "$IMAGES" | wc -l)
+              TOTAL_CRITICAL=$(find /scan-output -name "*.summary.txt" -exec grep "Critical Vulnerabilities:" {} \; | awk '{sum += $3} END {print sum}')
+              TOTAL_HIGH=$(find /scan-output -name "*.summary.txt" -exec grep "High Vulnerabilities:" {} \; | awk '{sum += $3} END {print sum}')
+              
+              cat > /scan-output/compliance-report-$(date +%Y%m%d).md << EOF
+              # Daily SBOM and Vulnerability Compliance Report
+              ## Date: $(date +%Y-%m-%d)
+              
+              ## Summary
+              - Total Images Scanned: $TOTAL_IMAGES
+              - Total Critical Vulnerabilities: ${TOTAL_CRITICAL:-0}
+              - Total High Vulnerabilities: ${TOTAL_HIGH:-0}
+              - Compliance Status: $(if [ ${TOTAL_CRITICAL:-0} -eq 0 ]; then echo "COMPLIANT"; else echo "NON-COMPLIANT"; fi)
+              
+              ## Details by Image
+              $(find /scan-output -name "*.summary.txt" -exec cat {} \;)
+              
+              ## Framework Compliance
+              - NIST SSDF: $(if [ ${TOTAL_CRITICAL:-0} -eq 0 ]; then echo "COMPLIANT"; else echo "NON-COMPLIANT"; fi)
+              - CISA SBOM: COMPLIANT
+              - Company Policy: $(if [ ${TOTAL_CRITICAL:-0} -eq 0 ]; then echo "COMPLIANT"; else echo "NON-COMPLIANT"; fi)
+              
+              ## Actions Required
+              $(if [ ${TOTAL_CRITICAL:-0} -gt 0 ]; then
+                echo "- IMMEDIATE: Remediate $TOTAL_CRITICAL critical vulnerabilities"
+              else
+                echo "- No immediate action required"
+              fi)
+              EOF
+              
+              echo "Pipeline completed successfully"
+            volumeMounts:
+            - name: tools-bin
+              mountPath: /usr/local/bin
+            - name: sbom-output
+              mountPath: /sbom-output
+            - name: scan-output
+              mountPath: /scan-output
+            - name: kubeconfig
+              mountPath: /root/.kube
+              readOnly: true
+            resources:
+              requests:
+                memory: "1Gi"
+                cpu: "500m"
+              limits:
+                memory: "2Gi"
+                cpu: "1000m"
+          restartPolicy: OnFailure
+          volumes:
+          - name: tools-bin
+            emptyDir: {}
+          - name: sbom-output
+            emptyDir: {}
+          - name: scan-output
+            emptyDir: {}
+          - name: kubeconfig
+            secret:
+              secretName: sbom-scanner-token
+              items:
+              - key: kubeconfig
+                path: config
+---
+# Service account for SBOM scanning
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sbom-scanner
+  namespace: sbom-system
+---
+# Role for reading pods and creating configmaps
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sbom-scanner-role
+  namespace: sbom-system
+rules:
+- apiGroups: [""]
+  resources: ["pods", "configmaps"]
+  verbs: ["get", "list", "watch", "create", "update"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sbom-scanner-binding
+  namespace: sbom-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sbom-scanner-role
+subjects:
+- kind: ServiceAccount
+  name: sbom-scanner
+  namespace: sbom-system

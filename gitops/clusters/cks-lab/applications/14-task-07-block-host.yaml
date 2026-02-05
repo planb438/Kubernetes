@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: 14-task-07-block-host
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
+    cks-task: "07"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/planb438/Kubernetes.git
+    targetRevision: HEAD
+    path: gitops/clusters/cks-lab/manifests/14-mock-tasks/task-07-block-host-access/provided-files
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: security-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+  info:
+    - name: Description
+      value: "Task 7 - Block Host Access and Privilege Escalation"
+    - name: Points
+      value: "24"
+    - name: Time Limit
+      value: "20 minutes"
+    - name: CKS Domain
+      value: "Cluster Hardening & System Hardening"
+    - name: Key Skills
+      value: "Host Access Blocking, Privilege Escalation Prevention, PSA Configuration"
+    - name: Compliance Frameworks
+      value: "CIS Kubernetes, NIST SP 800-190, PCI-DSS"
+    - name: Prerequisites
+      value: "Kyverno installed, PSA enabled"

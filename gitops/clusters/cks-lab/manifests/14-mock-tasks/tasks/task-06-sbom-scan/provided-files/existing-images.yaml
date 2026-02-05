@@ -1,0 +1,60 @@
+# Existing container images in production that need SBOM generation
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: production-images
+  namespace: sbom-system
+data:
+  images.yaml: |
+    images:
+      - name: "web-application"
+        image: "ghcr.io/company/production/web-app:v2.1.0"
+        namespace: "production"
+        criticality: "high"
+        scan_schedule: "daily"
+        
+      - name: "api-server"
+        image: "ghcr.io/company/production/api-server:v1.5.3"
+        namespace: "production"
+        criticality: "high"
+        scan_schedule: "daily"
+        
+      - name: "database-proxy"
+        image: "ghcr.io/company/production/db-proxy:v1.2.0"
+        namespace: "production"
+        criticality: "medium"
+        scan_schedule: "weekly"
+        
+      - name: "cache-service"
+        image: "redis:7.0-alpine"
+        namespace: "production"
+        criticality: "medium"
+        scan_schedule: "weekly"
+        
+      - name: "monitoring-agent"
+        image: "prom/prometheus:v2.47.0"
+        namespace: "monitoring"
+        criticality: "low"
+        scan_schedule: "monthly"
+        
+      - name: "legacy-app"
+        image: "ghcr.io/company/production/legacy-app:v1.0.0"
+        namespace: "production"
+        criticality: "high"
+        scan_schedule: "daily"
+        notes: "Contains known vulnerabilities - migration planned"
+    
+    registries:
+      - name: "ghcr.io"
+        requires_auth: true
+        auth_secret: "ghcr-credentials"
+        
+      - name: "docker.io"
+        requires_auth: false
+        
+    scan_config:
+      severity_threshold: "HIGH"
+      fail_on_critical: true
+      sbom_formats: ["spdx", "cyclonedx"]
+      storage_backend: "s3"
+      retention_days: 2555  # 7 years

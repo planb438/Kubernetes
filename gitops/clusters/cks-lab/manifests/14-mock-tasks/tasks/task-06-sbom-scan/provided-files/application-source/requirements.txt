@@ -1,0 +1,23 @@
+# Production dependencies for SBOM scanning demo
+# Includes both secure and vulnerable versions for testing
+
+# Web framework (secure version)
+flask==2.3.3
+
+# Database adapter (secure version)
+psycopg2==2.9.7
+
+# Caching client (secure version)
+redis==4.6.0
+
+# HTTP library (secure version)
+requests==2.31.0
+
+# YAML parsing (secure version)
+pyyaml==6.0.1
+
+# Additional dependencies for comprehensive SBOM
+cryptography==41.0.3
+pillow==10.0.0
+numpy==1.25.2
+pandas==2.0.3

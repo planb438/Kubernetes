@@ -1,0 +1,134 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compliance-requirements
+  namespace: security-system
+data:
+  cis-benchmark.yaml: |
+    requirements:
+      - id: "5.2.1"
+        title: "Minimize the admission of privileged containers"
+        description: "Do not admit privileged containers"
+        level: "Level 1"
+        check: "Review pod specifications for privileged: true"
+        
+      - id: "5.2.2"
+        title: "Minimize the admission of containers wishing to share the host process ID namespace"
+        description: "Do not admit containers with hostPID: true"
+        level: "Level 1"
+        check: "Review pod specifications for hostPID: true"
+        
+      - id: "5.2.3"
+        title: "Minimize the admission of containers wishing to share the host IPC namespace"
+        description: "Do not admit containers with hostIPC: true"
+        level: "Level 1"
+        check: "Review pod specifications for hostIPC: true"
+        
+      - id: "5.2.4"
+        title: "Minimize the admission of containers wishing to share the host network namespace"
+        description: "Do not admit containers with hostNetwork: true"
+        level: "Level 1"
+        check: "Review pod specifications for hostNetwork: true"
+        
+      - id: "5.2.5"
+        title: "Minimize the admission of containers with allowPrivilegeEscalation"
+        description: "Do not admit containers with allowPrivilegeEscalation: true"
+        level: "Level 1"
+        check: "Review securityContext for allowPrivilegeEscalation: true"
+        
+      - id: "5.2.6"
+        title: "Minimize the admission of containers with added capabilities"
+        description: "Do not admit containers with capabilities added beyond the default set"
+        level: "Level 2"
+        check: "Review securityContext.capabilities.add"
+        
+      - id: "5.2.7"
+        title: "Minimize the admission of containers with capabilities assigned"
+        description: "Do not admit containers with capabilities assigned"
+        level: "Level 2"
+        check: "Review securityContext.capabilities"
+        
+      - id: "5.2.8"
+        title: "Minimize the admission of containers with hostPath volumes"
+        description: "Do not admit containers with hostPath volumes"
+        level: "Level 1"
+        check: "Review volumes for hostPath"
+  
+  nist-requirements.yaml: |
+    requirements:
+      - control: "AC-3"
+        name: "Access Enforcement"
+        requirements:
+          - "Enforce least privilege for containers"
+          - "Prevent unauthorized host access"
+          - "Implement namespace isolation"
+          
+      - control: "AC-6"
+        name: "Least Privilege"
+        requirements:
+          - "Containers run with minimal privileges"
+          - "No privileged containers in production"
+          - "Prevent privilege escalation"
+          
+      - control: "SC-2"
+        name: "Separation of System and User Functionality"
+        requirements:
+          - "Isolate containers from host"
+          - "Prevent host namespace sharing"
+          - "Implement network segmentation"
+          
+      - control: "SC-39"
+        name: "Process Isolation"
+        requirements:
+          - "Isolate container processes"
+          - "Prevent host PID namespace sharing"
+          - "Implement process boundaries"
+  
+  pci-dss.yaml: |
+    requirements:
+      - id: "2.2"
+        title: "Develop configuration standards for all system components"
+        requirements:
+          - "Implement security hardening for containers"
+          - "Remove unnecessary functionality"
+          - "Document all security configurations"
+          
+      - id: "6.1"
+        title: "Establish a process to identify security vulnerabilities"
+        requirements:
+          - "Scan for insecure container configurations"
+          - "Identify host access vulnerabilities"
+          - "Regular vulnerability assessment"
+          
+      - id: "6.2"
+        title: "Ensure all systems have latest security patches"
+        requirements:
+          - "Patch container runtimes"
+          - "Update security policies regularly"
+          - "Maintain security configurations"
+  
+  company-policy.yaml: |
+    requirements:
+      host_access:
+        - "No hostNetwork in production namespaces"
+        - "No hostPID or hostIPC in any namespace"
+        - "hostPath volumes require security approval"
+        - "Exceptions documented and reviewed quarterly"
+        
+      privileges:
+        - "No privileged containers"
+        - "No root execution (runAsUser: 0)"
+        - "Privilege escalation disabled"
+        - "Capabilities dropped by default"
+        
+      exceptions:
+        - "kube-system namespace requires CISO approval"
+        - "Monitoring tools require security review"
+        - "Temporary exceptions limited to 30 days"
+        - "All exceptions logged and monitored"
+        
+      monitoring:
+        - "Real-time alerts for policy violations"
+        - "Weekly compliance reports"
+        - "Monthly security review"
+        - "Annual penetration testing"

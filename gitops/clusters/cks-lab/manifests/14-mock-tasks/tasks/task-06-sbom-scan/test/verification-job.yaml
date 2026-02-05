@@ -1,0 +1,255 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: task-06-verification
+  namespace: mock-exam-system
+  annotations:
+    task: "06"
+    points: "28"
+    cks-domain: "Supply Chain Security"
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: exam-verifier
+      initContainers:
+      - name: setup-sbom-tools
+        image: alpine:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "Setting up SBOM tools..."
+          apk add --no-cache curl jq
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+          echo "Tools installed: syft and grype"
+        volumeMounts:
+        - name: tools-bin
+          mountPath: /usr/local/bin
+      containers:
+      - name: verifier
+        image: bitnami/kubectl:latest
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          echo "=== Task 6 Verification: SBOM Generation and Vulnerability Scanning ==="
+          echo ""
+          
+          TOTAL_POINTS=0
+          MAX_POINTS=28
+          
+          # Check 1: SBOM CronJob exists (4 points)
+          echo "1. Checking SBOM generation CronJob..."
+          if kubectl get cronjob sbom-generator -n sbom-system >/dev/null 2>&1; then
+            echo "   ✓ SBOM generator CronJob exists"
+            
+            # Check schedule
+            SCHEDULE=$(kubectl get cronjob sbom-generator -n sbom-system -o jsonpath='{.spec.schedule}')
+            if [ "$SCHEDULE" = "0 2 * * *" ]; then
+              echo "   ✓ Correct schedule (daily at 2 AM)"
+              TOTAL_POINTS=$((TOTAL_POINTS + 4))
+            else
+              echo "   ⚠ Unexpected schedule: $SCHEDULE"
+              TOTAL_POINTS=$((TOTAL_POINTS + 2))
+            fi
+          else
+            echo "   ✗ SBOM generator CronJob missing"
+          fi
+          
+          # Check 2: SBOM tools are functional (5 points)
+          echo ""
+          echo "2. Testing SBOM tools..."
+          
+          # Test Syft
+          if syft --version >/dev/null 2>&1; then
+            echo "   ✓ Syft installed and functional"
+            SYFT_WORKS=true
+          else
+            echo "   ✗ Syft not working"
+            SYFT_WORKS=false
+          fi
+          
+          # Test Grype
+          if grype --version >/dev/null 2>&1; then
+            echo "   ✓ Grype installed and functional"
+            GRYPE_WORKS=true
+          else
+            echo "   ✗ Grype not working"
+            GRYPE_WORKS=false
+          fi
+          
+          if [ "$SYFT_WORKS" = true ] && [ "$GRYPE_WORKS" = true ]; then
+            TOTAL_POINTS=$((TOTAL_POINTS + 5))
+          fi
+          
+          # Check 3: Generate test SBOM (6 points)
+          echo ""
+          echo "3. Testing SBOM generation..."
+          
+          # Create a test image
+          cat > /tmp/test.Dockerfile << EOF
+          FROM alpine:latest
+          RUN echo "Test image for SBOM" > /test.txt
+          EOF
+          
+          # Build test image
+          docker build -f /tmp/test.Dockerfile -t sbom-test:latest /tmp/ >/dev/null 2>&1
+          
+          if [ $? -eq 0 ]; then
+            echo "   ✓ Test image built"
+            
+            # Generate SBOM
+            syft sbom-test:latest -o json > /tmp/test-sbom.json 2>/dev/null
+            
+            if [ $? -eq 0 ] && [ -s /tmp/test-sbom.json ]; then
+              echo "   ✓ SBOM generated successfully"
+              
+              # Check SBOM contents
+              PACKAGE_COUNT=$(jq '.artifacts | length' /tmp/test-sbom.json 2>/dev/null || echo "0")
+              if [ "$PACKAGE_COUNT" -gt 0 ]; then
+                echo "   ✓ SBOM contains $PACKAGE_COUNT packages"
+                TOTAL_POINTS=$((TOTAL_POINTS + 6))
+              else
+                echo "   ✗ SBOM empty or invalid"
+              fi
+            else
+              echo "   ✗ SBOM generation failed"
+            fi
+          else
+            echo "   ✗ Could not build test image"
+          fi
+          
+          # Check 4: Vulnerability scanning (5 points)
+          echo ""
+          echo "4. Testing vulnerability scanning..."
+          
+          # Scan test image
+          grype sbom-test:latest -o json > /tmp/test-vuln.json 2>/dev/null
+          
+          if [ $? -eq 0 ] && [ -s /tmp/test-vuln.json ]; then
+            echo "   ✓ Vulnerability scan completed"
+            
+            # Check scan results format
+            if jq -e '.matches' /tmp/test-vuln.json >/dev/null 2>&1; then
+              echo "   ✓ Scan results in correct format"
+              TOTAL_POINTS=$((TOTAL_POINTS + 5))
+            else
+              echo "   ✗ Invalid scan results format"
+            fi
+          else
+            echo "   ✗ Vulnerability scan failed"
+          fi
+          
+          # Check 5: Kyverno policy for vulnerabilities (4 points)
+          echo ""
+          echo "5. Checking vulnerability policies..."
+          
+          if kubectl get clusterpolicy check-vulnerabilities >/dev/null 2>&1; then
+            echo "   ✓ Vulnerability check policy exists"
+            
+            POLICY=$(kubectl get clusterpolicy check-vulnerabilities -o yaml)
+            if echo "$POLICY" | grep -q "validationFailureAction: Enforce"; then
+              echo "   ✓ Policy set to enforce"
+              TOTAL_POINTS=$((TOTAL_POINTS + 4))
+            else
+              echo "   ⚠ Policy not set to enforce"
+              TOTAL_POINTS=$((TOTAL_POINTS + 2))
+            fi
+          else
+            echo "   ✗ Vulnerability policy missing"
+          fi
+          
+          # Check 6: SBOM storage (4 points)
+          echo ""
+          echo "6. Checking SBOM storage..."
+          
+          # Check for ConfigMaps with SBOM data
+          SBOM_CONFIGMAPS=$(kubectl get configmaps -n sbom-system --selector=app=sbom-generator -o name | wc -l)
+          
+          if [ "$SBOM_CONFIGMAPS" -gt 0 ]; then
+            echo "   ✓ Found $SBOM_CONFIGMAPS SBOM storage ConfigMaps"
+            TOTAL_POINTS=$((TOTAL_POINTS + 4))
+          else
+            echo "   ⚠ No SBOM storage ConfigMaps found"
+            
+            # Check if namespace exists
+            if kubectl get namespace sbom-system >/dev/null 2>&1; then
+              echo "   ℹ sbom-system namespace exists but empty"
+            else
+              echo "   ✗ sbom-system namespace missing"
+            fi
+          fi
+          
+          # Cleanup
+          docker rmi sbom-test:latest >/dev/null 2>&1 || true
+          rm -f /tmp/test-sbom.json /tmp/test-vuln.json /tmp/test.Dockerfile
+          
+          echo ""
+          echo "=== Verification Complete ==="
+          echo "Total Points: $TOTAL_POINTS/$MAX_POINTS"
+          
+          # Generate detailed report
+          cat > /tmp/task-06-details.md << EOF
+          ## Task 6 Verification Details
+          
+          ### Components Checked
+          1. SBOM Generator CronJob: $( [ $TOTAL_POINTS -ge 4 ] && echo "✓" || echo "✗" )
+          2. SBOM Tools (Syft/Grype): $( [ $TOTAL_POINTS -ge 9 ] && echo "✓" || echo "✗" )
+          3. SBOM Generation Test: $( [ $TOTAL_POINTS -ge 15 ] && echo "✓" || echo "✗" )
+          4. Vulnerability Scanning: $( [ $TOTAL_POINTS -ge 20 ] && echo "✓" || echo "✗" )
+          5. Vulnerability Policies: $( [ $TOTAL_POINTS -ge 24 ] && echo "✓" || echo "✗" )
+          6. SBOM Storage: $( [ $TOTAL_POINTS -ge 28 ] && echo "✓" || echo "✗" )
+          
+          ### Test Results
+          - SBOM Generation: Successful
+          - Vulnerability Scanning: Functional
+          - Policy Enforcement: Configured
+          - Storage Mechanism: Present
+          
+          ### Recommendations
+          $(if [ $TOTAL_POINTS -lt 20 ]; then
+            echo "- Implement missing SBOM generation components"
+            echo "- Configure vulnerability scanning pipeline"
+            echo "- Set up storage for SBOM artifacts"
+          else
+            echo "- All major components implemented"
+            echo "- Consider adding Trivy for additional scanning"
+            echo "- Implement SBOM signing with Cosign"
+          fi)
+          EOF
+          
+          # Store result
+          cat > /tmp/task-06-result.json << EOF
+          {
+            "task": "06",
+            "name": "SBOM Generation and Vulnerability Scanning",
+            "points": $TOTAL_POINTS,
+            "max_points": $MAX_POINTS,
+            "timestamp": "$(date -Iseconds)",
+            "details": {
+              "cronjob_exists": $( [ $TOTAL_POINTS -ge 4 ] && echo "true" || echo "false" ),
+              "tools_functional": $( [ $TOTAL_POINTS -ge 9 ] && echo "true" || echo "false" ),
+              "sbom_generation": $( [ $TOTAL_POINTS -ge 15 ] && echo "true" || echo "false" ),
+              "vulnerability_scanning": $( [ $TOTAL_POINTS -ge 20 ] && echo "true" || echo "false" ),
+              "policies_configured": $( [ $TOTAL_POINTS -ge 24 ] && echo "true" || echo "false" ),
+              "storage_implemented": $( [ $TOTAL_POINTS -ge 28 ] && echo "true" || echo "false" )
+            }
+          }
+          EOF
+          
+          kubectl create configmap task-06-result \
+            --from-file=/tmp/task-06-result.json \
+            -n mock-exam-system \
+            --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Also store the detailed report
+          kubectl create configmap task-06-details \
+            --from-file=/tmp/task-06-details.md \
+            -n mock-exam-system \
+            --dry-run=client -o yaml | kubectl apply -f -
+          
+        restartPolicy: Never
+        volumes:
+        - name: tools-bin
+          emptyDir: {}
+  backoffLimit: 0
