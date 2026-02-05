@@ -9,7 +9,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/planb438/Kubernetes.git
-    targetRevision: main
+    targetRevision: HEAD
     path: gitops/clusters/cks-lab/manifests/13-sa-abuse-prevention/monitoring
     directory:
       recurse: true
