@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: 14-task-03-networkpolicy
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    cks-task: "03"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/planb438/Kubernetes.git
+    targetRevision: HEAD
+    path: gitops/clusters/cks-lab/manifests/14-mock-tasks/task-03-networkpolicy/provided-files
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mock-exam-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+  info:
+    - name: Description
+      value: "Task 3 - Network Policy Implementation for CKS Mock Exam"
+    - name: Points
+      value: "20"
+    - name: Time Limit
+      value: "15 minutes"
+    - name: CKS Domain
+      value: "Cluster Hardening & System Hardening"
