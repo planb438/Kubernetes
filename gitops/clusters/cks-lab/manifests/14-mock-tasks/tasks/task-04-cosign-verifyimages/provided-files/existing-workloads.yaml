@@ -1,0 +1,74 @@
+# Existing workloads that should be verified
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: existing-signed-app
+  namespace: production
+  labels:
+    app: signed-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: signed-app
+  template:
+    metadata:
+      labels:
+        app: signed-app
+    spec:
+      containers:
+      - name: app
+        image: ghcr.io/company/production/signed-app:v1.0.0
+        ports:
+        - containerPort: 8080
+---
+# This should be blocked by the policy
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: existing-unsigned-app
+  namespace: production
+  labels:
+    app: unsigned-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: unsigned-app
+  template:
+    metadata:
+      labels:
+        app: unsigned-app
+    spec:
+      containers:
+      - name: app
+        image: ghcr.io/company/production/unsigned-app:latest
+        ports:
+        - containerPort: 8080
+---
+# Emergency workload in kube-system
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-system-nginx
+  namespace: kube-system
+  annotations:
+    emergency-patch: "true"
+    reason: "Critical security patch"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+      annotations:
+        emergency-patch: "true"
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        ports:
+        - containerPort: 80

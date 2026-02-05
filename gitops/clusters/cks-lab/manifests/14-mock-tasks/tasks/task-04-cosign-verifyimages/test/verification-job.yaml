@@ -1,0 +1,265 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: task-04-verification
+  namespace: mock-exam-system
+  annotations:
+    task: "04"
+    points: "25"
+    cks-domain: "Supply Chain Security"
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: exam-verifier
+      initContainers:
+      - name: setup-test-images
+        image: alpine:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "Setting up test images..."
+          # This would normally build/pull test images
+          # For exam purposes, we simulate
+          echo "Test images configured for verification"
+        volumeMounts:
+        - name: test-data
+          mountPath: /test-data
+      containers:
+      - name: verifier
+        image: bitnami/kubectl:latest
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          echo "=== Task 4 Verification: Cosign Image Verification ==="
+          echo ""
+          
+          TOTAL_POINTS=0
+          MAX_POINTS=25
+          
+          # Check 1: Kyverno policy exists (5 points)
+          echo "1. Checking Kyverno ClusterPolicy..."
+          if kubectl get clusterpolicy verify-image-signatures >/dev/null 2>&1; then
+            echo "   ✓ verify-image-signatures policy exists"
+            POLICY=$(kubectl get clusterpolicy verify-image-signatures -o yaml)
+            
+            # Check for required configurations
+            CONFIG_CORRECT=true
+            
+            if ! echo "$POLICY" | grep -q "ghcr.io/company/production/\*"; then
+              echo "   ✗ Missing production image reference"
+              CONFIG_CORRECT=false
+            fi
+            
+            if ! echo "$POLICY" | grep -q "publicKeys:"; then
+              echo "   ✗ Missing public key configuration"
+              CONFIG_CORRECT=false
+            fi
+            
+            if ! echo "$POLICY" | grep -q "validationFailureAction: Enforce"; then
+              echo "   ✗ Policy not set to enforce"
+              CONFIG_CORRECT=false
+            fi
+            
+            if ! echo "$POLICY" | grep -q "emergency-patch"; then
+              echo "   ✗ Missing emergency patch exemption"
+              CONFIG_CORRECT=false
+            fi
+            
+            if [ "$CONFIG_CORRECT" = true ]; then
+              echo "   ✓ Policy configuration correct"
+              TOTAL_POINTS=$((TOTAL_POINTS + 5))
+            fi
+          else
+            echo "   ✗ Kyverno policy missing"
+          fi
+          
+          # Check 2: Test signed image deployment (5 points)
+          echo ""
+          echo "2. Testing signed image deployment..."
+          
+          cat > /tmp/signed-deployment.yaml << EOF
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: verification-signed
+            namespace: default
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: verification-signed
+            template:
+              metadata:
+                labels:
+                  app: verification-signed
+              spec:
+                containers:
+                - name: app
+                  image: ghcr.io/company/production/signed-app:v1.0.0
+                  ports:
+                  - containerPort: 8080
+          EOF
+          
+          kubectl apply -f /tmp/signed-deployment.yaml --dry-run=server 2>&1 | grep -q "created\|configured"
+          
+          if [ $? -eq 0 ]; then
+            echo "   ✓ Signed image deployment allowed"
+            TOTAL_POINTS=$((TOTAL_POINTS + 5))
+          else
+            echo "   ✗ Signed image deployment blocked (incorrect)"
+            # Check error message
+            kubectl apply -f /tmp/signed-deployment.yaml --dry-run=server 2>&1 | head -5
+          fi
+          
+          # Check 3: Test unsigned image blocking (5 points)
+          echo ""
+          echo "3. Testing unsigned image blocking..."
+          
+          cat > /tmp/unsigned-deployment.yaml << EOF
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: verification-unsigned
+            namespace: default
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: verification-unsigned
+            template:
+              metadata:
+                labels:
+                  app: verification-unsigned
+              spec:
+                containers:
+                - name: app
+                  image: ghcr.io/company/production/unsigned-app:latest
+                  ports:
+                  - containerPort: 8080
+          EOF
+          
+          kubectl apply -f /tmp/unsigned-deployment.yaml --dry-run=server 2>&1 | grep -qi "denied\|failed\|error"
+          
+          if [ $? -eq 0 ]; then
+            echo "   ✓ Unsigned image correctly blocked"
+            TOTAL_POINTS=$((TOTAL_POINTS + 5))
+          else
+            echo "   ✗ Unsigned image not blocked (security failure)"
+          fi
+          
+          # Check 4: Emergency patch exemption (5 points)
+          echo ""
+          echo "4. Testing emergency patch exemption..."
+          
+          cat > /tmp/emergency-deployment.yaml << EOF
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: verification-emergency
+            namespace: kube-system
+            annotations:
+              emergency-patch: "true"
+              emergency-reason: "Verification test"
+              ticket-reference: "VERIFY-001"
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: verification-emergency
+            template:
+              metadata:
+                labels:
+                  app: verification-emergency
+                annotations:
+                  emergency-patch: "true"
+              spec:
+                containers:
+                - name: nginx
+                  image: nginx:1.25
+                  ports:
+                  - containerPort: 80
+          EOF
+          
+          kubectl apply -f /tmp/emergency-deployment.yaml --dry-run=server 2>&1 | grep -q "created\|configured"
+          
+          if [ $? -eq 0 ]; then
+            echo "   ✓ Emergency patch allowed with annotation"
+            TOTAL_POINTS=$((TOTAL_POINTS + 5))
+          else
+            echo "   ✗ Emergency patch blocked incorrectly"
+          fi
+          
+          # Check 5: Invalid emergency blocked (5 points)
+          echo ""
+          echo "5. Testing invalid emergency patch..."
+          
+          cat > /tmp/invalid-emergency.yaml << EOF
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: verification-invalid-emergency
+            namespace: kube-system
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: verification-invalid-emergency
+            template:
+              metadata:
+                labels:
+                  app: verification-invalid-emergency
+              spec:
+                containers:
+                - name: nginx
+                  image: nginx:1.25
+                  ports:
+                  - containerPort: 80
+          EOF
+          
+          kubectl apply -f /tmp/invalid-emergency.yaml --dry-run=server 2>&1 | grep -qi "denied\|failed\|error"
+          
+          if [ $? -eq 0 ]; then
+            echo "   ✓ Invalid emergency correctly blocked"
+            TOTAL_POINTS=$((TOTAL_POINTS + 5))
+          else
+            echo "   ✗ Invalid emergency not blocked"
+          fi
+          
+          # Cleanup
+          kubectl delete deployment verification-signed verification-unsigned \
+            verification-emergency verification-invalid-emergency \
+            --ignore-not-found 2>/dev/null
+          
+          echo ""
+          echo "=== Verification Complete ==="
+          echo "Total Points: $TOTAL_POINTS/$MAX_POINTS"
+          
+          # Store result
+          cat > /tmp/task-04-result.json << EOF
+          {
+            "task": "04",
+            "name": "Cosign Image Verification",
+            "points": $TOTAL_POINTS,
+            "max_points": $MAX_POINTS,
+            "timestamp": "$(date -Iseconds)",
+            "details": {
+              "policy_exists": $( [ $TOTAL_POINTS -ge 5 ] && echo "true" || echo "false" ),
+              "signed_allowed": $( [ $TOTAL_POINTS -ge 10 ] && echo "true" || echo "false" ),
+              "unsigned_blocked": $( [ $TOTAL_POINTS -ge 15 ] && echo "true" || echo "false" ),
+              "emergency_allowed": $( [ $TOTAL_POINTS -ge 20 ] && echo "true" || echo "false" ),
+              "invalid_blocked": $( [ $TOTAL_POINTS -ge 25 ] && echo "true" || echo "false" )
+            }
+          }
+          EOF
+          
+          kubectl create configmap task-04-result \
+            --from-file=/tmp/task-04-result.json \
+            -n mock-exam-system \
+            --dry-run=client -o yaml | kubectl apply -f -
+          
+        restartPolicy: Never
+        volumes:
+        - name: test-data
+          emptyDir: {}
+  backoffLimit: 0

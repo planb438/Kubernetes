@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: image-registry-config
+  namespace: kyverno
+data:
+  registries.yaml: |
+    registries:
+      - name: ghcr.io
+        insecure: false
+        credentials:
+          username: $IMAGE_REGISTRY_USERNAME
+          password: $IMAGE_REGISTRY_PASSWORD
+      - name: docker.io
+        insecure: false
+        credentials: {}
+    allowedRegistries:
+      - "ghcr.io/company/*"
+      - "docker.io/library/nginx"
+      - "docker.io/library/busybox"
+    blockedRegistries:
+      - "untrusted-registry.example.com"
+      - "localhost:*"

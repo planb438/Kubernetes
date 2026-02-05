@@ -1,0 +1,16 @@
+# List of approved signed images for testing
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: approved-images
+  namespace: kyverno
+data:
+  production-images: |
+    - ghcr.io/company/production/signed-app:v1.0.0
+    - ghcr.io/company/production/api-server:v2.1.0
+    - ghcr.io/company/production/database-proxy:v1.5.0
+  staging-images: |
+    - ghcr.io/company/staging/test-app:*
+  emergency-images: |
+    - nginx:1.25
+    - busybox:latest

@@ -1,0 +1,19 @@
+# Test signed image for verification
+FROM python:3.11-slim
+
+# Install dependencies
+RUN pip install flask==2.3.3 cryptography==41.0.3
+
+# Copy application
+COPY app.py /app.py
+COPY requirements.txt /requirements.txt
+
+# Create non-root user
+RUN useradd -m -u 1000 appuser
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
+  CMD python -c "import sys; sys.exit(0)"
+
+CMD ["python", "/app.py"]

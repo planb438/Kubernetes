@@ -1,0 +1,138 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-image-signatures
+  annotations:
+    policies.kyverno.io/title: Verify Image Signatures
+    policies.kyverno.io/category: Supply Chain Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/subject: Pod,Deployment,StatefulSet,DaemonSet,Job,CronJob
+    policies.kyverno.io/description: |
+      Enforces Cosign signature verification for container images.
+      Production images must be signed and have SBOM attestation.
+      Emergency patches in kube-system are allowed with annotation.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+  # Rule 1: Verify production images from ghcr.io/company/production/*
+  - name: verify-production-images
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+          - Job
+          - CronJob
+        namespaces:
+        - "!kube-system"
+    context:
+    - name: imageRegistry
+      configMap:
+        name: approved-images
+        namespace: kyverno
+        key: production-images
+    verifyImages:
+    - imageReferences:
+      - "ghcr.io/company/production/*"
+      attestors:
+      - entries:
+        - keys:
+            publicKeys: |
+              -----BEGIN PUBLIC KEY-----
+              MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE6O7cDlCJ9poIgmndk6MqP5Rqk6K7
+              9zMq3hJjSZKkUq5L8QYQk7K8QqYqJvGjLvFpO5fW8qB7LlLpF5vLm8KvLp9Q==
+              -----END PUBLIC KEY-----
+      attestations:
+      - predicateType: "https://spdx.dev/Document"
+        conditions:
+        - key: "{{ predicate.sbom.creator }}"
+          operator: Equals
+          value: "company-ci"
+      mutateDigest: true
+      required: true
+      verifyDigest: true
+      imageRegistry: "ghcr.io"
+  
+  # Rule 2: Emergency exemption for kube-system
+  - name: allow-emergency-patches
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+        namespaces:
+        - kube-system
+    preconditions:
+      any:
+      - key: "{{ request.object.metadata.annotations.\"emergency-patch\" }}"
+        operator: Equals
+        value: "true"
+    validate:
+      message: "Emergency patch deployed with required annotation"
+      pattern:
+        metadata:
+          annotations:
+            emergency-patch: "true"
+            emergency-reason: "?*"
+            ticket-reference: "?*"
+  
+  # Rule 3: Block if emergency patch missing required fields
+  - name: validate-emergency-patch
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+        namespaces:
+        - kube-system
+    validate:
+      message: "Emergency patches in kube-system must have emergency-patch annotation"
+      deny:
+        conditions:
+          all:
+          - key: "{{ request.object.metadata.annotations.\"emergency-patch\" }}"
+            operator: NotEquals
+            value: "true"
+          - key: "{{ request.object.spec.containers[].image }}"
+            operator: NotIn
+            value: ["nginx:*", "busybox:*"]
+  
+  # Rule 4: Verify staging images (warning only)
+  - name: verify-staging-images
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+        namespaces:
+        - staging
+    context:
+    - name: stagingImages
+      configMap:
+        name: approved-images
+        namespace: kyverno
+        key: staging-images
+    verifyImages:
+    - imageReferences:
+      - "ghcr.io/company/staging/*"
+      attestors:
+      - entries:
+        - keys:
+            publicKeys: |
+              -----BEGIN PUBLIC KEY-----
+              MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE6O7cDlCJ9poIgmndk6MqP5Rqk6K7
+              9zMq3hJjSZKkUq5L8QYQk7K8QqYqJvGjLvFpO5fW8qB7LlLpF5vLm8KvLp9Q==
+              -----END PUBLIC KEY-----
+      mutateDigest: false
+      required: false
