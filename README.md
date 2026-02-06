@@ -6,11 +6,13 @@
 
 
 # 🛡️ CKS Security Labs & GitOps Portfolio
+---
 Welcome to my Kubernetes Security GitOps portfolio. This repository demonstrates real-world security implementations using GitOps workflows with Argo CD. It includes production-ready CKS-level labs that showcase security-as-code practices and automated policy enforcement.
 
 ---
 
 📋 Portfolio Overview
+---
 This repository serves as both a CKS preparation lab and a professional GitOps security portfolio, featuring:
 
 20+ practical security labs covering CKS exam objectives
@@ -26,8 +28,10 @@ Real-world attack scenarios with corresponding defenses
 ---
 
 🛡️ Security Topics Covered
+---
 
 🔐 GitOps Security
+---
 Argo CD Implementation: Multi-app management with sync policies and self-healing
 
 Policy-as-Code: Git-based Kyverno policy enforcement with automatic synchronization
@@ -39,6 +43,7 @@ Drift Prevention: Automated remediation of configuration deviations
 ---
 
 ✅ CKS Exam Domains
+---
 Domain	Implementation
 Cluster Setup	Hardened kubeadm clusters with containerd
 System Hardening	CIS benchmarks with kube-bench, minimized OS footprint
@@ -50,7 +55,6 @@ Monitoring & Logging	Audit logging, Prometheus/Grafana, Falco alerts
 ---
 
 🧰 Tools & Technologies
-
 ---
 Category	Tools
 
@@ -85,6 +89,7 @@ Compliance	CIS Benchmarks, NSA/CISA Kubernetes Hardening Guide
 ---
 
 🔄 GitOps Workflow
+---
 This repository implements a complete GitOps security workflow:
 
 Security Policy Development → Policies written as YAML in Git
@@ -102,6 +107,8 @@ Self-Healing → Argo CD corrects configuration drift
 ---
 
 🎯 Professional Applications
+---
+
 The patterns in this repository are directly applicable to:
 
 Enterprise Kubernetes Security - Production-ready security baselines
@@ -117,6 +124,7 @@ Security Training - Hands-on labs for team upskilling
 ---
 
 📈 Impact Metrics
+---
 Implementations in this portfolio have demonstrated:
 
 90% reduction in manual security configuration
@@ -132,6 +140,7 @@ Automated compliance reporting and validation
 ---
 
 🤝 Contributing & Contact
+---
 This portfolio is actively maintained. Feel free to:
 
 Fork for your own CKS preparation
@@ -143,6 +152,7 @@ Connect for security consulting opportunities
 LinkedIn: https://www.linkedin.com/in/adari-bain-298924152/
 
 📄 License
+---
 Educational use - please attribute if reused in training materials.
 
 Updated: March 2024 | Maintainer: Adari Bain | Certifications: CKS, CKA, AWS SA
@@ -150,6 +160,7 @@ Updated: March 2024 | Maintainer: Adari Bain | Certifications: CKS, CKA, AWS SA
 ---
 
 ## 🚀 Getting Started
+---
 
 1. Set up a Kubernetes cluster (KIND, Minikube,microk8s or cloud-based).
 2. Clone this repo:
