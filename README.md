@@ -8,6 +8,8 @@
 # 🛡️ CKS Security Labs & GitOps Portfolio
 Welcome to my Kubernetes Security GitOps portfolio. This repository demonstrates real-world security implementations using GitOps workflows with Argo CD. It includes production-ready CKS-level labs that showcase security-as-code practices and automated policy enforcement.
 
+---
+
 📋 Portfolio Overview
 This repository serves as both a CKS preparation lab and a professional GitOps security portfolio, featuring:
 
@@ -34,6 +36,8 @@ Security-as-Code: All security configurations managed declaratively through Git
 
 Drift Prevention: Automated remediation of configuration deviations
 
+---
+
 ✅ CKS Exam Domains
 Domain	Implementation
 Cluster Setup	Hardened kubeadm clusters with containerd
@@ -43,16 +47,42 @@ Supply Chain Security	Cosign image verification, SBOM generation with Syft
 Runtime Security	Falco runtime detection, Seccomp, AppArmor profiles
 Monitoring & Logging	Audit logging, Prometheus/Grafana, Falco alerts
 
+---
+
 🧰 Tools & Technologies
+
+---
 Category	Tools
+
 GitOps & Deployment	Argo CD, Helm, Kustomize, Flux CD
+
+--
 Policy Enforcement	Kyverno, OPA Gatekeeper, Pod Security Admission
+
+--
 Image Security	Cosign, Trivy, Grype, Syft, Docker Content Trust
+
+--
+
 Runtime Security	Falco, Tracee, gVisor, Kata Containers
+
+--
+
 Network Security	Cilium, Calico, Network Policies, Service Mesh
+
+--
+
 Scanning & Audit	kube-bench, kube-hunter, kubeaudit, Popeye
+
+--
+
 Secrets Management	Sealed Secrets, HashiCorp Vault, External Secrets
+
+--
+
 Compliance	CIS Benchmarks, NSA/CISA Kubernetes Hardening Guide
+
+---
 
 🔄 GitOps Workflow
 This repository implements a complete GitOps security workflow:
@@ -69,6 +99,8 @@ Continuous Monitoring → Falco detects policy violations
 
 Self-Healing → Argo CD corrects configuration drift
 
+---
+
 🎯 Professional Applications
 The patterns in this repository are directly applicable to:
 
@@ -82,6 +114,8 @@ Incident Response - Pre-built security controls and monitoring
 
 Security Training - Hands-on labs for team upskilling
 
+---
+
 📈 Impact Metrics
 Implementations in this portfolio have demonstrated:
 
@@ -94,6 +128,8 @@ Minutes vs. days for security policy deployment
 Zero configuration drift with Argo CD self-healing
 
 Automated compliance reporting and validation
+
+---
 
 🤝 Contributing & Contact
 This portfolio is actively maintained. Feel free to:
@@ -111,6 +147,7 @@ Educational use - please attribute if reused in training materials.
 
 Updated: March 2024 | Maintainer: Adari Bain | Certifications: CKS, CKA, AWS SA
 
+---
 
 ## 🚀 Getting Started
 
