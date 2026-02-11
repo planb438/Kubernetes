@@ -1,4 +1,4 @@
-Kubernetes Lab - AWS Infrastructure
+# Kubernetes Lab - AWS Infrastructure
 This Terraform configuration sets up a 3-node Kubernetes lab environment on AWS with 1 master and 2 worker nodes.
 
 Files Structure
