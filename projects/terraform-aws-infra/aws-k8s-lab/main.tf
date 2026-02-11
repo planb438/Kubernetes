@@ -116,7 +116,7 @@ data "aws_ami" "ubuntu" {
 
 resource "aws_instance" "master" {
   ami                    = data.aws_ami.ubuntu.id
-  instance_type          = "t3.micro"
+  instance_type          = "t3.small"
   subnet_id              = aws_subnet.public.id
   key_name               = aws_key_pair.generated.key_name
   vpc_security_group_ids = [aws_security_group.k8s_sg.id]
@@ -127,7 +127,7 @@ resource "aws_instance" "master" {
 resource "aws_instance" "workers" {
   count                  = 2
   ami                    = data.aws_ami.ubuntu.id
-  instance_type          = "t3.micro"
+  instance_type          = "t3.small"
   subnet_id              = aws_subnet.public.id
   key_name               = aws_key_pair.generated.key_name
   vpc_security_group_ids = [aws_security_group.k8s_sg.id]
