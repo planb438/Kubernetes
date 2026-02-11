@@ -1,95 +1,143 @@
-terraform {
-  required_version = ">= 1.0.0"
-  
-  backend "s3" {
-    bucket         = "your-terraform-state-bucket-name"
-    key            = "3-node-cluster/terraform.tfstate"
-    region         = "us-east-1"
-    encrypt        = true
-    dynamodb_table = "terraform-state-lock"
-  }
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
-
 provider "aws" {
   region = var.aws_region
 }
 
-# Create S3 bucket for Terraform state (uncomment if bucket doesn't exist)
-/*
-resource "aws_s3_bucket" "terraform_state" {
-  bucket = "terraform-state-${random_id.bucket_suffix.hex}"
-  
-  lifecycle {
-    prevent_destroy = true
+############################
+# VPC
+############################
+
+resource "aws_vpc" "k8s_vpc" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+
+  tags = {
+    Name = "k8s-lab-vpc"
   }
 }
 
-resource "aws_s3_bucket_versioning" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
-  
-  versioning_configuration {
-    status = "Enabled"
+############################
+# Internet Gateway
+############################
+
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.k8s_vpc.id
+
+  tags = {
+    Name = "k8s-lab-igw"
   }
 }
 
-resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
-  
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
+############################
+# Public Subnet
+############################
+
+resource "aws_subnet" "public" {
+  vpc_id                  = aws_vpc.k8s_vpc.id
+  cidr_block              = "10.0.1.0/24"
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "k8s-public-subnet"
   }
 }
 
-resource "aws_dynamodb_table" "terraform_state_lock" {
-  name           = "terraform-state-lock"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "LockID"
-  
-  attribute {
-    name = "LockID"
-    type = "S"
+############################
+# Route Table
+############################
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.k8s_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+
+  tags = {
+    Name = "k8s-public-rt"
   }
 }
 
-resource "random_id" "bucket_suffix" {
-  byte_length = 8
-}
-*/
-
-module "vpc" {
-  source = "./modules/vpc"
-  
-  vpc_cidr            = var.vpc_cidr
-  public_subnet_cidrs = var.public_subnet_cidrs
-  aws_region          = var.aws_region
-  project_name        = var.project_name
+resource "aws_route_table_association" "assoc" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public.id
 }
 
-module "iam" {
-  source = "./modules/iam"
-  
-  project_name = var.project_name
+############################
+# Security Group
+############################
+
+resource "aws_security_group" "k8s_sg" {
+  name   = "k8s-lab-sg"
+  vpc_id = aws_vpc.k8s_vpc.id
+
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Kubernetes API
+  ingress {
+    from_port   = 6443
+    to_port     = 6443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Internal cluster communication
+  ingress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    self        = true
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
-module "ec2_cluster" {
-  source = "./modules/ec2"
-  
-  project_name        = var.project_name
-  instance_count      = 3
-  instance_type       = var.instance_type
-  vpc_id             = module.vpc.vpc_id
-  public_subnet_ids  = module.vpc.public_subnet_ids
-  key_name           = var.key_name
-  iam_instance_profile = module.iam.instance_profile_name
-  
-  depends_on = [module.vpc, module.iam]
+############################
+# EC2 Instances
+############################
+
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["al2023-ami-*-x86_64"]
+  }
+}
+
+resource "aws_instance" "master" {
+  ami                    = data.aws_ami.amazon_linux.id
+  instance_type          = "t2.micro"
+  subnet_id              = aws_subnet.public.id
+  vpc_security_group_ids = [aws_security_group.k8s_sg.id]
+  key_name               = var.key_name
+
+  tags = {
+    Name = "k8s-master"
+  }
+}
+
+resource "aws_instance" "workers" {
+  count                  = 2
+  ami                    = data.aws_ami.amazon_linux.id
+  instance_type          = "t2.micro"
+  subnet_id              = aws_subnet.public.id
+  vpc_security_group_ids = [aws_security_group.k8s_sg.id]
+  key_name               = var.key_name
+
+  tags = {
+    Name = "k8s-worker-${count.index + 1}"
+  }
 }
