@@ -1,5 +1,14 @@
 terraform {
   required_version = ">= 1.0.0"
+  
+  backend "s3" {
+    bucket         = "your-terraform-state-bucket-name"
+    key            = "3-node-cluster/terraform.tfstate"
+    region         = "us-east-1"
+    encrypt        = true
+    dynamodb_table = "terraform-state-lock"
+  }
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -12,135 +21,75 @@ provider "aws" {
   region = var.aws_region
 }
 
-resource "aws_key_pair" "k8s_key" {
-  key_name   = "k8s-lab-key"
-  public_key = file(var.ssh_public_key_path)
-}
-
-resource "aws_vpc" "k8s_vpc" {
-  cidr_block = "10.0.0.0/16"
-  tags = {
-    Name = "k8s-vpc"
-  }
-}
-
-resource "aws_subnet" "public" {
-  vpc_id                  = aws_vpc.k8s_vpc.id
-  cidr_block              = "10.0.1.0/24"
-  availability_zone       = "us-east-1a"
-  map_public_ip_on_launch = true
-  tags = {
-    Name = "k8s-public-subnet"
+# Create S3 bucket for Terraform state (uncomment if bucket doesn't exist)
+/*
+resource "aws_s3_bucket" "terraform_state" {
+  bucket = "terraform-state-${random_id.bucket_suffix.hex}"
+  
+  lifecycle {
+    prevent_destroy = true
   }
 }
 
-resource "aws_internet_gateway" "igw" {
-  vpc_id = aws_vpc.k8s_vpc.id
-  tags = {
-    Name = "k8s-igw"
+resource "aws_s3_bucket_versioning" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+  
+  versioning_configuration {
+    status = "Enabled"
   }
 }
 
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.k8s_vpc.id
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.igw.id
-  }
-  tags = {
-    Name = "k8s-public-rt"
+resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+  
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
   }
 }
 
-resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public.id
-  route_table_id = aws_route_table.public.id
-}
-
-resource "aws_security_group" "nodes" {
-  name        = "k8s-nodes-sg"
-  vpc_id      = aws_vpc.k8s_vpc.id
+resource "aws_dynamodb_table" "terraform_state_lock" {
+  name           = "terraform-state-lock"
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "LockID"
   
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  
-  ingress {
-    from_port   = 6443
-    to_port     = 6443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  
-  ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    self        = true
-  }
-  
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  
-  tags = {
-    Name = "k8s-nodes-sg"
+  attribute {
+    name = "LockID"
+    type = "S"
   }
 }
 
-resource "aws_instance" "master" {
-  ami           = "ami-0c55b159cbfafe1f0"
-  instance_type = var.master_instance_type
-  subnet_id     = aws_subnet.public.id
-  vpc_security_group_ids = [aws_security_group.nodes.id]
-  key_name      = aws_key_pair.k8s_key.key_name
+resource "random_id" "bucket_suffix" {
+  byte_length = 8
+}
+*/
+
+module "vpc" {
+  source = "./modules/vpc"
   
-  root_block_device {
-    volume_size = 30
-    volume_type = "gp3"
-  }
-  
-  tags = {
-    Name = "k8s-master"
-  }
+  vpc_cidr            = var.vpc_cidr
+  public_subnet_cidrs = var.public_subnet_cidrs
+  aws_region          = var.aws_region
+  project_name        = var.project_name
 }
 
-resource "aws_instance" "worker1" {
-  ami           = "ami-0c55b159cbfafe1f0"
-  instance_type = var.worker_instance_type
-  subnet_id     = aws_subnet.public.id
-  vpc_security_group_ids = [aws_security_group.nodes.id]
-  key_name      = aws_key_pair.k8s_key.key_name
+module "iam" {
+  source = "./modules/iam"
   
-  root_block_device {
-    volume_size = 30
-    volume_type = "gp3"
-  }
-  
-  tags = {
-    Name = "k8s-worker1"
-  }
+  project_name = var.project_name
 }
 
-resource "aws_instance" "worker2" {
-  ami           = "ami-0c55b159cbfafe1f0"
-  instance_type = var.worker_instance_type
-  subnet_id     = aws_subnet.public.id
-  vpc_security_group_ids = [aws_security_group.nodes.id]
-  key_name      = aws_key_pair.k8s_key.key_name
+module "ec2_cluster" {
+  source = "./modules/ec2"
   
-  root_block_device {
-    volume_size = 30
-    volume_type = "gp3"
-  }
+  project_name        = var.project_name
+  instance_count      = 3
+  instance_type       = var.instance_type
+  vpc_id             = module.vpc.vpc_id
+  public_subnet_ids  = module.vpc.public_subnet_ids
+  key_name           = var.key_name
+  iam_instance_profile = module.iam.instance_profile_name
   
-  tags = {
-    Name = "k8s-worker2"
-  }
+  depends_on = [module.vpc, module.iam]
 }

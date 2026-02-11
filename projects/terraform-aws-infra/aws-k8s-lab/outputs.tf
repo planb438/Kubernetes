@@ -1,35 +1,34 @@
-output "ssh_key_name" {
-  value = aws_key_pair.k8s_key.key_name
+output "vpc_id" {
+  description = "ID of the created VPC"
+  value       = module.vpc.vpc_id
 }
 
-output "master_public_ip" {
-  value = aws_instance.master.public_ip
+output "public_subnet_ids" {
+  description = "IDs of public subnets"
+  value       = module.vpc.public_subnet_ids
 }
 
-output "master_private_ip" {
-  value = aws_instance.master.private_ip
+output "instance_public_ips" {
+  description = "Public IP addresses of instances"
+  value       = module.ec2_cluster.instance_public_ips
 }
 
-output "worker1_public_ip" {
-  value = aws_instance.worker1.public_ip
+output "instance_ids" {
+  description = "IDs of the created instances"
+  value       = module.ec2_cluster.instance_ids
 }
 
-output "worker1_private_ip" {
-  value = aws_instance.worker1.private_ip
+output "security_group_id" {
+  description = "ID of the security group"
+  value       = module.ec2_cluster.security_group_id
 }
 
-output "worker2_public_ip" {
-  value = aws_instance.worker2.public_ip
+output "s3_bucket_name" {
+  description = "Name of the S3 bucket for Terraform state"
+  value       = try(aws_s3_bucket.terraform_state.bucket, "Bucket not created in this run")
 }
 
-output "worker2_private_ip" {
-  value = aws_instance.worker2.private_ip
-}
-
-output "ssh_commands" {
-  value = <<-EOT
-    ssh -i ~/.ssh/id_rsa ubuntu@${aws_instance.master.public_ip}
-    ssh -i ~/.ssh/id_rsa ubuntu@${aws_instance.worker1.public_ip}
-    ssh -i ~/.ssh/id_rsa ubuntu@${aws_instance.worker2.public_ip}
-  EOT
+output "iam_role_arn" {
+  description = "ARN of the IAM role for instances"
+  value       = module.iam.instance_role_arn
 }
