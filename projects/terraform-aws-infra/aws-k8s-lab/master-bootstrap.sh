@@ -22,5 +22,14 @@ net.bridge.bridge-nf-call-ip6tables = 1
 net.bridge.bridge-nf-call-iptables = 1
 net.ipv4.ip_forward = 1
 EOF
+sudo modprobe overlay
+sudo modprobe br_netfilter
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
 sudo sysctl --system
-echo "Master ready for kubeadm init"
+sudo systemctl restart kubelet
+sudo kubeadm init --apiserver-advertise-address=10.0.1.210 --pod-network-cidr=10.244.0.0/16
+echo "Master ready with a Flannel-compatible pod CIDR: sudo kubeadm init --apiserver-advertise-address=10.0.1.210 --pod-network-cidr=10.244.0.0/16"
+
