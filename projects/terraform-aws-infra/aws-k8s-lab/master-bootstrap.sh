@@ -33,7 +33,7 @@ sudo systemctl restart kubelet
 sudo kubeadm init --apiserver-advertise-address=k8scp --pod-network-cidr=10.244.0.0/16
 echo "Configuring with a Flannel-compatible pod CIDR: sudo kubeadm init --apiserver-advertise-address=10.0.1.210 --pod-network-cidr=10.244.0.0/16"
 mkdir -p $HOME/.kube
-sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 echo "Installing Flannel CNI"
 kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
