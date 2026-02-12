@@ -39,6 +39,8 @@ echo "Installing Flannel CNI"
 kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
 sudo systemctl restart kubelet
 echo "Master Node Bootstrap Script - SetUP Finish"
+echo "If fail # Add an local DNS alias for our cp server.  Edit the/etc/hostsfile and add the above IP address and assign a namek8scp.
+# root@cp: ̃# vim /etc/hosts10.128.0.3 k8scp    #<-- Add this line10.128.0.3 cp       #<-- Add this line127.0.0.1 localhost"
 
 
 
