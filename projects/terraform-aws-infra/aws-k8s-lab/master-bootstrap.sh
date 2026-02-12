@@ -35,8 +35,9 @@ echo "Configuring with a Flannel-compatible pod CIDR: sudo kubeadm init --apiser
 mkdir -p $HOME/.kube
 sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
-echo "Install Flannel CNI"
+echo "Installing Flannel CNI"
 kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+sudo systemctl restart kubelet
 echo "Master Node Bootstrap Script - SetUP Finish"
 
 
