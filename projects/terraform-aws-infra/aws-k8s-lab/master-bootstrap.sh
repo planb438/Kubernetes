@@ -30,14 +30,13 @@ br_netfilter
 EOF
 sudo sysctl --system
 sudo systemctl restart kubelet
-sudo kubeadm init --apiserver-advertise-address=k8scp --pod-network-cidr=10.244.0.0/16
-echo "Configuring with a Flannel-compatible pod CIDR: sudo kubeadm init --apiserver-advertise-address=10.0.1.210 --pod-network-cidr=10.244.0.0/16"
+sudo kubeadm init --apiserver-advertise-address=cp --pod-network-cidr=192.168.0.0/16
+echo "For Calico to work correctly, you need to pass --pod-network-cidr=192.168.0.0/16 to kubeadm init or update the calico.yml file to match your Pod network. Note that Calico works on amd64, arm64, and ppc64le only."
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
-echo "Installing Flannel CNI"
-kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
-sudo systemctl restart kubelet
+echo "Installing Calico Network"
+kubectl apply -f https://docs.projectcalico.org/v3.8/manifests/calico.yamlsudo systemctl restart kubelet
 echo "Master Node Bootstrap Script - SetUP Finish"
 echo "If fail # Add an local DNS alias for our cp server.  Edit the/etc/hostsfile and add the above IP address and assign a namek8scp.
 # root@cp: ̃# vim /etc/hosts10.128.0.3 k8scp    #<-- Add this line10.128.0.3 cp       #<-- Add this line127.0.0.1 localhost"
