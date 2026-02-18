@@ -30,7 +30,8 @@ br_netfilter
 EOF
 sudo sysctl --system
 sudo systemctl restart kubelet
-sudo kubeadm init --apiserver-advertise-address=cp --pod-network-cidr=192.168.0.0/16
+export HOST_IP=$(hostname -I | awk '{print $1}')
+sudo kubeadm init --apiserver-advertise-address=$HOST_IP --pod-network-cidr=192.168.0.0/16
 echo "For Calico to work correctly, you need to pass --pod-network-cidr=192.168.0.0/16 to kubeadm init or update the calico.yml file to match your Pod network. Note that Calico works on amd64, arm64, and ppc64le only."
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
