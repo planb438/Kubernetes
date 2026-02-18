@@ -2,3 +2,6 @@
 *.tfstate
 *.tfstate.*
 terraform.tfvars
+*.tfstate.*
+*.pem
+*.hcl
