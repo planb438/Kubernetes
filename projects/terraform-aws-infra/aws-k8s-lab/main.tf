@@ -29,6 +29,7 @@ resource "aws_key_pair" "generated" {
 resource "aws_vpc" "k8s_vpc" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
+
   tags = { Name = "k8s-lab-vpc" }
 }
 
@@ -114,6 +115,7 @@ data "aws_ami" "ubuntu" {
 # EC2 Instances
 #################################
 
+# MASTER (8GB root disk)
 resource "aws_instance" "master" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = "t3.small"
@@ -121,9 +123,15 @@ resource "aws_instance" "master" {
   key_name               = aws_key_pair.generated.key_name
   vpc_security_group_ids = [aws_security_group.k8s_sg.id]
 
+  root_block_device {
+    volume_size = 8
+    volume_type = "gp3"
+  }
+
   tags = { Name = "k8s-master" }
 }
 
+# WORKERS (11GB each → total infra disk = 30GB)
 resource "aws_instance" "workers" {
   count                  = 2
   ami                    = data.aws_ami.ubuntu.id
@@ -131,6 +139,11 @@ resource "aws_instance" "workers" {
   subnet_id              = aws_subnet.public.id
   key_name               = aws_key_pair.generated.key_name
   vpc_security_group_ids = [aws_security_group.k8s_sg.id]
+
+  root_block_device {
+    volume_size = 11
+    volume_type = "gp3"
+  }
 
   tags = { Name = "k8s-worker-${count.index + 1}" }
 }
