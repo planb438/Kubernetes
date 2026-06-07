@@ -8,9 +8,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/planb438/Kubernetes.git
+    repoURL: https://github.com/planb438/Kubernetes-CKS-Security-Labs.git
     targetRevision: HEAD
-    path: gitops/clusters/cks-lab/manifests/13-sa-abuse-prevention/infrastructure
+    path: security-GitOps-portfolio/clusters/cks-lab/manifests/13-sa-abuse-prevention/infrastructure
     directory:
       recurse: true
   destination:

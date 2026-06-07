@@ -9,9 +9,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/planb438/Kubernetes.git
+    repoURL: https://github.com/planb438/Kubernetes-CKS-Security-Labs.git
     targetRevision: HEAD
-    path: gitops/clusters/cks-lab/manifests/09-audit-logs/testing
+    path: security-GitOps-portfolio/clusters/cks-lab/manifests/09-audit-logs/testing
     directory:
       recurse: true
   destination:

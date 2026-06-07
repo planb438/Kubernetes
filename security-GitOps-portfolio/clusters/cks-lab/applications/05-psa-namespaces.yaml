@@ -10,9 +10,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/planb438/Kubernetes.git
+    repoURL: https://github.com/planb438/Kubernetes-CKS-Security-Labs.git
     targetRevision: main
-    path: gitops/clusters/cks-lab/manifests/05-podsecurity-admission/namespaces
+    path: security-GitOps-portfolio/clusters/cks-lab/manifests/05-podsecurity-admission/namespaces
   destination:
     server: https://kubernetes.default.svc
     namespace: default  # Namespace resources go to default namespace
