@@ -1,0 +1,2 @@
+resources:
+- scan-test-pod.yaml

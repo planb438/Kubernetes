@@ -1,0 +1,5 @@
+resources:
+- cosign-install.yaml
+- kyverno-install.yaml
+
+

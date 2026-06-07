@@ -1,0 +1,6 @@
+resources:
+- allowed-registries.yaml
+- image-pull-policy.yaml
+- image-scanning.yaml
+
+

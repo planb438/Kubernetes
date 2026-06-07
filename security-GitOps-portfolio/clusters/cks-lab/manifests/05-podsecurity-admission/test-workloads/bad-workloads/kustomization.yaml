@@ -1,0 +1,5 @@
+resources:
+- privileged-pod.yaml
+- root-pod.yaml
+
+

@@ -1,0 +1,3 @@
+resources:
+- compliance-frameworks.yaml
+- existing-images.yaml

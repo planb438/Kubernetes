@@ -1,0 +1,10 @@
+resources:
+- 01-deny-all.yaml
+- 02-namespace-isolation.yaml
+- 03-tiered-access.yaml
+- 04-egress-controls.yaml
+- 05-dns-policies.yaml
+- 06-cidr-based.yaml
+- 07-port-restrictions.yaml
+
+

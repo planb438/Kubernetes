@@ -1,0 +1,4 @@
+resources:
+- audit-namespaces.yaml
+- audit-rbac.yaml
+- audit-service-accounts.yaml

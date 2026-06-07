@@ -1,0 +1,6 @@
+resources:
+- insecure-deployment.yaml
+- multi-registry-deployment.yaml
+- secure-deployment.yaml
+
+

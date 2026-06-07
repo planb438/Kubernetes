@@ -1,0 +1,3 @@
+resources:
+- audit-log-generator.yaml
+- log-verification-job.yaml

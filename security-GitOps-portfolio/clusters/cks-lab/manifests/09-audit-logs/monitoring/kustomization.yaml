@@ -1,0 +1,2 @@
+resources:
+- audit-log-forwarder.yaml

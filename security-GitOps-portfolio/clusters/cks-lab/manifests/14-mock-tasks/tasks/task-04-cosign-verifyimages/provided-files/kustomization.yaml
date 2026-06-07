@@ -1,0 +1,3 @@
+resources:
+- existing-workloads.yaml
+- signed-image-list.yaml

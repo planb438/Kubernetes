@@ -1,0 +1,6 @@
+resources:
+- baseline-ns.yaml
+- privileged-ns.yaml
+- restricted-ns.yaml
+
+

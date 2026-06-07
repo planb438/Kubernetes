@@ -1,0 +1,2 @@
+resources:
+- falco-event-forwarder.yaml

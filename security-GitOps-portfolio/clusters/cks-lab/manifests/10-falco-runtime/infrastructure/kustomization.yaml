@@ -1,0 +1,3 @@
+resources:
+- falco-namespaces.yaml
+- falco-service-accounts.yaml

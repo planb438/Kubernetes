@@ -1,0 +1,3 @@
+resources:
+- alert-verification.yaml
+- falco-trigger-tests.yaml

@@ -1,0 +1,3 @@
+resources:
+- falco-rules-basic.yaml
+- falco-rules-compliance.yaml

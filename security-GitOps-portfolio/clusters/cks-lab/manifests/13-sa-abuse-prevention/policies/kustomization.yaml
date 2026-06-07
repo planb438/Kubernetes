@@ -1,0 +1,3 @@
+resources:
+- service-account-policies.yaml
+- token-mount-policies.yaml

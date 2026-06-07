@@ -1,0 +1,3 @@
+resources:
+- sbom-generator-job.yaml
+- vulnerability-scanner.yaml

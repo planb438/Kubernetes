@@ -1,0 +1,3 @@
+resources:
+- existing-pods.yaml
+- initial-namespaces.yaml

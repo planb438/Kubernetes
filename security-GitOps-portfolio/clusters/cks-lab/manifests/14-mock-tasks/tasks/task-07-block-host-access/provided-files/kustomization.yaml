@@ -1,0 +1,3 @@
+resources:
+- compliance-requirements.yaml
+- current-workloads.yaml

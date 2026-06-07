@@ -1,0 +1,3 @@
+resources:
+- severity-thresholds.yaml
+- vulnerability-policies.yaml

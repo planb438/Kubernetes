@@ -1,0 +1,3 @@
+resources:
+- image-registry-config.yaml
+- kyverno-policy.yaml

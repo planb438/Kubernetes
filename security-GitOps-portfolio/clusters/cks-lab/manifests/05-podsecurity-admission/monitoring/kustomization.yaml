@@ -1,0 +1,5 @@
+resources:
+- psa-audit-job.yaml
+- violation-dashboard.yaml
+
+

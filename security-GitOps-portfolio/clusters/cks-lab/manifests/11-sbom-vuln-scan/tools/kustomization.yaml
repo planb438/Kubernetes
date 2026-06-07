@@ -1,0 +1,3 @@
+resources:
+- grype-installer.yaml
+- syft-installer.yaml

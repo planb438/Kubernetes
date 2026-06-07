@@ -1,0 +1,5 @@
+resources:
+- namespace-exemption.yaml
+- service-account-exemption.yaml
+
+

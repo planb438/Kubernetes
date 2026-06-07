@@ -1,0 +1,4 @@
+resources:
+- audit-policy-basic.yaml
+- audit-policy-detailed.yaml
+- audit-policy-production.yaml

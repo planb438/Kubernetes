@@ -1,0 +1,3 @@
+resources:
+- falco-driver-installer.yaml
+- falco-helm-values.yaml

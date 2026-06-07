@@ -1,0 +1,4 @@
+resources:
+- admission-webhook.yaml
+- kyverno-policy.yaml
+- psa-configuration.yaml

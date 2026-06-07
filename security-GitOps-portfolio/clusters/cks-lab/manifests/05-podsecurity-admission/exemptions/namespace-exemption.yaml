@@ -9,7 +9,7 @@ metadata:
   annotations:
     reason: "Legacy applications that cannot be modified"
     sunset-date: "2024-12-31"
-    owner: "platform-team@company.com"
+    owner: "Adari-Bain@company.com"
 ---
 apiVersion: v1
 kind: ConfigMap

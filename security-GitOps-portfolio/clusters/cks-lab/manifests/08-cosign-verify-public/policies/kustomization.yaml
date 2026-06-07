@@ -1,0 +1,6 @@
+resources:
+- allowed-signers.yaml
+- attestation-verification.yaml
+- cosign-verification.yaml
+- sbom-verification.yaml
+

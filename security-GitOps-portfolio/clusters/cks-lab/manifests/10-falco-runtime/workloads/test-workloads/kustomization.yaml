@@ -1,0 +1,2 @@
+resources:
+- falco-trigger-pod.yaml

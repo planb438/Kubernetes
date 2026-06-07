@@ -1,0 +1,3 @@
+resources:
+- compliance-standards.yaml
+- vulnerable-pod.yaml
