@@ -155,7 +155,7 @@ LinkedIn: https://www.linkedin.com/in/adari-bain-298924152/
 ---
 Educational use - please attribute if reused in training materials.
 
-Updated: March 2024 | Maintainer: Adari Bain | Certifications: CKS, CKA, AWS SA
+Updated: March 2026 | Maintainer: Adari Bain | Certifications: CKS, CKA, AWS SA
 
 ---
 
@@ -165,5 +165,5 @@ Updated: March 2024 | Maintainer: Adari Bain | Certifications: CKS, CKA, AWS SA
 1. Set up a Kubernetes cluster (KIND, Minikube,microk8s or cloud-based).
 2. Clone this repo:
    ```bash
-   git clone https://github.com/planb438/Kubernetes.git
+   git clone https://github.com/planb438/Kubernetes-CKS-Security-Labs.git
    cd 
