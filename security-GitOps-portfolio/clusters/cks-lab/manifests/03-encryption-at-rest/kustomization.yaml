@@ -1,0 +1,6 @@
+resources:
+- encryption-sim-config.yaml
+- kms-simulator.yaml
+- simulated-etcd-operator.yaml
+- test-secrets.yaml
+- verification-job.yaml

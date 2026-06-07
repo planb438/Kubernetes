@@ -1,0 +1,5 @@
+resources:
+- kyverno-policy.yaml
+- namespace.yaml
+- test-bad-pod.yaml
+- test-good-pod.yaml

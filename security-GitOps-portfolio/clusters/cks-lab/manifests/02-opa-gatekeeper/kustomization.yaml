@@ -1,0 +1,7 @@
+resources:
+- audit-policy.yaml
+- constraint-template.yaml
+- constraint.yaml
+- namespace.yaml
+- test-bad-pod.yaml
+- test-good-pod.yaml

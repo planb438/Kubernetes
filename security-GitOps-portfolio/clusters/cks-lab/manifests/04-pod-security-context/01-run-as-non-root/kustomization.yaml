@@ -1,0 +1,3 @@
+resources:
+- bad-pod.yaml
+- good-pod.yaml
